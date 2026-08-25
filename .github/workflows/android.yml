@@ -6,10 +6,19 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: read
+  actions: write
+
 jobs:
   build:
     name: Build APK + AAB
     runs-on: ubuntu-latest
+    env:
+      ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+      ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+      ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -29,16 +38,15 @@ jobs:
           gradle-version: "8.9"
 
       - name: Decode upload keystore
-        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
-        working-directory: android/app
-        run: echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > keystore.jks
+        run: |
+          if [ -n "$ANDROID_KEYSTORE_BASE64" ]; then
+            echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > android/app/keystore.jks
+          else
+            echo "No upload keystore secret; release AAB will use the debug key."
+          fi
 
       - name: Assemble debug APK and release AAB
         working-directory: android
-        env:
-          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: gradle :app:assembleDebug :app:bundleRelease --no-daemon --stacktrace
 
       - name: Upload debug APK
