@@ -1,0 +1,2 @@
+-keep class com.aihypetycoon.app.** { *; }
+-dontwarn kotlinx.**
