@@ -141,6 +141,6 @@ jobs:
           body: |
             **${{ steps.ver.outputs.name }}** (versionCode ${{ steps.ver.outputs.code }})
 
-            Sideload the **release APK**. This build is the 3D campus — tap Lab, train, open Chat.
+            Sideload the **release APK**. Upload the **AAB** to Play Console if it is signed with your upload key.
 
-            Upload the **AAB** to Play Console if it is signed with your upload key.
+            Every push to `main` auto-bumps the patch version and ships a new APK.
