@@ -1,6 +1,12 @@
 package com.aihypetycoon.app.game
 
-data class Employee(val id: String, val roleId: String, val name: String, val hiredOn: Int)
+data class Employee(
+    val id: String,
+    val roleId: String,
+    val name: String,
+    val hiredOn: Int,
+    val morale: Double = 72.0,
+)
 data class ModelJob(val specId: String, val remaining: Int, val total: Int)
 data class FinishedModel(
     val id: String,
@@ -8,7 +14,18 @@ data class FinishedModel(
     val quality: Double,
     val shipped: Boolean,
     val fakeBench: Boolean,
+    val launched: Boolean = false,
 )
+data class Product(
+    val id: String,
+    val name: String,
+    val modelId: String,
+    val users: Int,
+    val arpu: Double,
+    val quality: Double,
+)
+data class GpuOrder(val qty: Int, val remaining: Int)
+data class Competitor(val id: String, val name: String, val hype: Double, val valuation: Double)
 data class NewsItem(val id: String, val day: Int, val text: String, val tone: String)
 data class Effect(
     val cash: Double = 0.0,
@@ -21,6 +38,8 @@ data class Effect(
     val heat: Double = 0.0,
     val evil: Double = 0.0,
     val waitlist: Int = 0,
+    val users: Int = 0,
+    val morale: Double = 0.0,
     val valuationMul: Double = 0.0,
     val log: String? = null,
     val logTone: String = "ok",
@@ -49,6 +68,7 @@ data class RoleDef(
     val heat: Double,
     val scandalDecay: Double,
     val demoBoost: Double,
+    val product: Double = 0.0,
 )
 data class ModelSpec(
     val id: String,
@@ -59,6 +79,7 @@ data class ModelSpec(
     val researchNeed: Int,
     val qualityCap: Int,
     val hypeOnShip: Int,
+    val arpu: Double = 0.08,
 )
 data class RoundDef(
     val id: String,
@@ -70,7 +91,7 @@ data class RoundDef(
     val dilution: Double,
 )
 data class GameState(
-    val version: Int = 1,
+    val version: Int = 2,
     val seed: Long,
     val rng: Int,
     val day: Int,
@@ -95,6 +116,17 @@ data class GameState(
     val employees: List<Employee>,
     val training: ModelJob?,
     val models: List<FinishedModel>,
+    val products: List<Product> = emptyList(),
+    val users: Int = 0,
+    val revenueToday: Double = 0.0,
+    val listed: Boolean = false,
+    val stockPrice: Double = 0.0,
+    val shares: Int = 10_000_000,
+    val market: String = "quiet",
+    val marketDaysLeft: Int = 48,
+    val competitors: List<Competitor> = emptyList(),
+    val gpuOrders: List<GpuOrder> = emptyList(),
+    val morale: Double = 74.0,
     val demoCooldown: Int,
     val waitlistCooldown: Int,
     val stealCooldown: Int,

@@ -1,35 +1,37 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
+import { Building2, FlaskConical, Landmark, Skull, Users } from "lucide-react";
 import { blip, unlockAudio } from "@/game/audio";
-import { ENDING_COPY, EVENTS, stageCopy, stageFor } from "@/game/content";
+import { DAY_MS, EVENTS, FAIL_COPY, MILESTONE_COPY } from "@/game/content";
 import { writeSave, loadSave } from "@/game/save";
 import { useGame } from "@/game/store";
 import type { TabId } from "@/game/types";
 import { Hud } from "./Hud";
-import { HqCard } from "./HqCard";
-import { NewsFeed } from "./NewsFeed";
-import { OpsPanel, LabPanel, PeoplePanel, ShadowPanel } from "./panels";
+import { HqScene } from "./HqScene";
+import { FloorPanel, LabPanel, CrewPanel, MarketPanel, ShadowPanel } from "./panels";
 import { EventDialog } from "./EventDialog";
 import { EndingScreen } from "./EndingScreen";
 import { TitleScreen } from "./TitleScreen";
+import { Juice } from "./Juice";
 
-const TABS: { id: TabId; label: string }[] = [
-  { id: "ops", label: "Ops" },
-  { id: "lab", label: "Lab" },
-  { id: "people", label: "People" },
-  { id: "shadow", label: "Shadow" },
+const TABS: { id: TabId; label: string; icon: typeof Building2 }[] = [
+  { id: "floor", label: "Floor", icon: Building2 },
+  { id: "lab", label: "Lab", icon: FlaskConical },
+  { id: "crew", label: "Crew", icon: Users },
+  { id: "market", label: "Tape", icon: Landmark },
+  { id: "shadow", label: "Shadow", icon: Skull },
 ];
 
 export function GameApp() {
   const state = useGame((s) => s.state);
   const toast = useGame((s) => s.toast);
   const clearToast = useGame((s) => s.clearToast);
-  const [tab, setTab] = useState<TabId>("ops");
+  const [tab, setTab] = useState<TabId>("floor");
   const [hasSave, setHasSave] = useState(false);
-  const [mounted, setMounted] = useState(false);
+  const seenMilestones = useRef<Set<string>>(new Set());
+  const [banner, setBanner] = useState<{ title: string; body: string } | null>(null);
 
   useEffect(() => {
-    setMounted(true);
     setHasSave(!!loadSave());
   }, []);
 
@@ -49,9 +51,8 @@ export function GameApp() {
       const cur = useGame.getState().state;
       if (cur && cur.speed > 0 && !cur.eventId && !cur.ending) {
         acc += dt * 1000 * cur.speed;
-        const dayMs = 850;
-        while (acc >= dayMs) {
-          acc -= dayMs;
+        while (acc >= DAY_MS) {
+          acc -= DAY_MS;
           useGame.getState().tick(1);
         }
       }
@@ -81,9 +82,19 @@ export function GameApp() {
     if (toast) blip("ok");
   }, [toast]);
 
-  if (!mounted) {
-    return <div className="min-h-dvh bg-bg" />;
-  }
+  useEffect(() => {
+    if (!state) return;
+    for (const id of state.milestones) {
+      if (seenMilestones.current.has(id)) continue;
+      seenMilestones.current.add(id);
+      const copy = MILESTONE_COPY[id];
+      if (copy) {
+        setBanner(copy);
+        blip("good");
+        window.setTimeout(() => setBanner(null), 3200);
+      }
+    }
+  }, [state]);
 
   if (!state) {
     return (
@@ -91,6 +102,7 @@ export function GameApp() {
         hasSave={hasSave}
         onStart={(name) => {
           unlockAudio();
+          seenMilestones.current = new Set();
           useGame.getState().newGame(name);
         }}
         onContinue={() => {
@@ -102,7 +114,7 @@ export function GameApp() {
   }
 
   if (state.ending) {
-    const copy = ENDING_COPY[state.ending];
+    const copy = FAIL_COPY[state.ending];
     return (
       <EndingScreen
         ending={state.ending}
@@ -119,52 +131,61 @@ export function GameApp() {
     );
   }
 
-  const stage = stageFor(state);
-  const hq = stageCopy(stage);
-  const ev = state.eventId === "acquire-close"
-    ? {
-        id: "acquire-close",
-        title: "The term sheet is real",
-        body: `They will pay ${Math.round(state.acquireOffer).toLocaleString("en-US")} and fold ${state.company} into a tooltip. Your garage becomes a slide in someone else's all-hands.`,
-        choices: [
-          { id: "take", label: "Sign", hint: "Soft landing. Logo dies politely." },
-          { id: "walk", label: "Walk", hint: "Stay independent. Burn continues." },
-        ],
-      }
-    : EVENTS.find((e) => e.id === state.eventId);
+  const ev =
+    state.eventId === "acquire-close"
+      ? {
+          id: "acquire-close",
+          title: "The term sheet is real",
+          body: `They will pay ${Math.round(state.acquireOffer).toLocaleString("en-US")} and fold ${state.company} into a tooltip. You can walk. The company can keep going.`,
+          choices: [
+            { id: "take", label: "Sign", hint: "Soft landing. This is an ending." },
+            { id: "walk", label: "Walk", hint: "Stay independent. Burn continues." },
+          ],
+        }
+      : EVENTS.find((e) => e.id === state.eventId);
 
   return (
     <div className="min-h-dvh bg-bg text-fg">
       <Hud state={state} />
-      <main className="mx-auto grid max-w-6xl gap-4 px-3 pb-28 pt-3 sm:px-5 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:pb-10">
-        <div className="flex flex-col gap-4">
-          <HqCard state={state} hq={hq} />
-          <NewsFeed items={state.news} />
-        </div>
+      <Juice cash={state.cash} hype={state.hype} />
+      <main className="mx-auto grid max-w-6xl gap-4 px-3 pb-28 pt-3 sm:px-5 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)] lg:pb-10">
+        <HqScene state={state} tab={tab} onTab={setTab} />
         <section className="rounded-xl border border-border bg-surface p-3 sm:p-4">
-          <div className="mb-3 flex gap-1 rounded-lg bg-elevated p-1">
-            {TABS.map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => setTab(t.id)}
-                className={`min-h-11 flex-1 rounded-md px-2 text-sm font-medium transition-colors duration-150 ${
-                  tab === t.id ? "bg-paper text-ink" : "text-muted hover:text-fg"
-                }`}
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
-          {tab === "ops" && <OpsPanel state={state} />}
+          <p className="mb-3 hidden font-mono text-[10px] tracking-[0.16em] text-subtle uppercase lg:block">
+            {TABS.find((t) => t.id === tab)?.label}
+          </p>
+          {tab === "floor" && <FloorPanel state={state} />}
           {tab === "lab" && <LabPanel state={state} />}
-          {tab === "people" && <PeoplePanel state={state} />}
+          {tab === "crew" && <CrewPanel state={state} />}
+          {tab === "market" && <MarketPanel state={state} />}
           {tab === "shadow" && <ShadowPanel state={state} />}
         </section>
       </main>
 
+      <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-bg/95 backdrop-blur-sm lg:hidden">
+        <div className="grid grid-cols-5 px-1 pb-[env(safe-area-inset-bottom)]">
+          {TABS.map((t) => {
+            const Icon = t.icon;
+            const on = tab === t.id;
+            return (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setTab(t.id)}
+                className={`flex min-h-14 flex-col items-center justify-center gap-1 text-[10px] ${
+                  on ? "text-paper" : "text-subtle"
+                }`}
+              >
+                <Icon className="h-4 w-4" />
+                {t.label}
+              </button>
+            );
+          })}
+        </div>
+      </nav>
+
       <footer className="hidden px-5 pb-6 text-xs text-subtle lg:flex lg:justify-between">
-        <span>Autosaves on this device.</span>
+        <span>Autosaves on this device. Timeline never caps.</span>
         <Link to="/privacy" className="hover:text-muted">
           Privacy
         </Link>
@@ -185,6 +206,13 @@ export function GameApp() {
           className="fade-up pointer-events-none fixed inset-x-0 bottom-20 z-40 mx-auto w-max max-w-[min(92vw,28rem)] rounded-md border border-border bg-elevated px-4 py-2 text-sm text-paper shadow-soft lg:bottom-8"
         >
           {toast}
+        </div>
+      )}
+
+      {banner && (
+        <div className="fade-up pointer-events-none fixed inset-x-0 top-20 z-40 mx-auto w-max max-w-[min(92vw,24rem)] rounded-lg border border-sage/40 bg-surface px-4 py-3 text-center shadow-soft">
+          <p className="font-display text-xl italic">{banner.title}</p>
+          <p className="mt-1 text-xs text-muted">{banner.body}</p>
         </div>
       )}
     </div>

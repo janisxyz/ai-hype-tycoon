@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   actions: write
 
 jobs:
@@ -62,3 +62,16 @@ jobs:
           name: AI-Hype-Tycoon-release-aab
           path: android/app/build/outputs/bundle/release/*.aab
           if-no-files-found: error
+
+      - name: Publish GitHub Release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v2.${{ github.run_number }}
+          name: AI Hype Tycoon 2.1.${{ github.run_number }}
+          files: |
+            android/app/build/outputs/apk/debug/*.apk
+            android/app/build/outputs/bundle/release/*.aab
+          generate_release_notes: true
+          body: |
+            Play-ready 2.1. Living HQ, slower days, unlimited timeline after IPO. Sideload the debug APK. Upload the AAB to Play Console if it is signed with your upload key.

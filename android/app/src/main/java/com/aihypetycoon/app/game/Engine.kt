@@ -5,11 +5,13 @@ import kotlin.math.min
 import kotlin.math.roundToInt
 
 object Engine {
-    const val GPU_COST = 14000
-    const val CLOUD_BURST = 9500
-    private const val GPU_POWER = 22.0
-    private const val HYPE_DECAY = 0.28
-    private const val BROKE_LIMIT = 16
+    const val GPU_COST = 16000
+    const val CLOUD_BURST = 12000
+    private const val GPU_POWER = 8.0
+    private const val GPU_YIELD = 6.2
+    private const val HYPE_DECAY = 0.11
+    private const val BROKE_LIMIT = 36
+    private const val GPU_LEAD = 5
 
     fun clamp(n: Double, a: Double, b: Double) = max(a, min(b, n))
 
@@ -40,7 +42,7 @@ object Engine {
     private fun news(s: GameState, text: String, tone: String = "ok"): GameState {
         val (n, v) = roll(s)
         val item = NewsItem("n-${n.day}-${(v * 1e9).toLong()}", n.day, text, tone)
-        return n.copy(news = (listOf(item) + n.news).take(48))
+        return n.copy(news = (listOf(item) + n.news).take(56))
     }
 
     fun applyEffect(state: GameState, fx: Effect): GameState {
@@ -55,124 +57,224 @@ object Engine {
             heat = clamp(state.heat + fx.heat, 0.0, 100.0),
             evil = max(0.0, state.evil + fx.evil),
             waitlist = max(0, state.waitlist + fx.waitlist),
+            users = max(0, state.users + fx.users),
+            morale = clamp(state.morale + fx.morale, 0.0, 100.0),
         )
         if (fx.valuationMul != 0.0) s = s.copy(valuation = max(0.0, s.valuation * fx.valuationMul))
         if (fx.shortageDays > 0) s = s.copy(gpuShortageUntil = max(s.gpuShortageUntil, s.day + fx.shortageDays))
         if (fx.log != null) s = news(s, fx.log, fx.logTone)
         if (fx.ending != null) s = s.copy(ending = fx.ending, speed = 0)
         if (fx.acquireOffer) {
-            val offer = s.valuation * (0.85 + s.hype / 500)
+            val offer = s.valuation * (0.9 + s.hype / 400)
             s = s.copy(acquireOffer = offer, eventId = "acquire-close", speed = 0)
         }
         return s
     }
 
-    fun totals(s: GameState): Triple<Double, Double, Double> {
+    data class Totals(
+        val salary: Double,
+        val research: Double,
+        val hype: Double,
+        val quality: Double,
+        val eff: Double,
+        val heat: Double,
+        val scandalDecay: Double,
+        val demo: Double,
+        val product: Double,
+    )
+
+    fun totals(s: GameState): Totals {
+        val moraleMul = 0.7 + (s.morale / 100.0) * 0.45
         var salary = 0.0
         var research = 0.0
+        var hype = 0.0
+        var quality = 0.0
         var eff = 1.0
+        var heat = 0.0
+        var sc = 0.0
+        var demo = 0.0
+        var product = 0.0
         s.employees.forEach { e ->
-            Content.roles.find { it.id == e.roleId }?.let {
-                salary += it.salaryMo
-                research += it.research
-                eff += it.computeEff
+            Content.roles.find { it.id == e.roleId }?.let { role ->
+                val m = (e.morale / 100.0) * moraleMul
+                salary += role.salaryMo
+                research += role.research * m
+                hype += role.hype * m
+                quality += role.quality * m
+                eff += role.computeEff
+                heat += role.heat
+                sc += role.scandalDecay
+                demo += role.demoBoost
+                product += role.product * m
             }
         }
-        return Triple(salary, research, eff)
+        return Totals(salary, research, hype, quality, eff, heat, sc, demo, product)
     }
 
     fun dailyBurn(s: GameState): Double {
-        val (salary, _, _) = totals(s)
-        return salary / 30.0 + s.gpus * GPU_POWER
+        val t = totals(s)
+        return t.salary / 30.0 + s.gpus * GPU_POWER + Content.rent(Content.stage(s))
+    }
+
+    fun dailyRevenue(s: GameState): Double {
+        if (s.products.isEmpty()) return 0.0
+        val t = totals(s)
+        val q = 0.45 + s.quality / 180.0 + t.product * 0.4
+        return s.products.sumOf { it.users * it.arpu * q }
     }
 
     fun valuation(s: GameState): Double {
-        val boost = when (s.lastRound) {
-            "c" -> 18.0
-            "b" -> 8.0
-            "a" -> 3.2
-            "seed" -> 1.6
-            else -> 1.0
-        }
-        val base = 180_000 + s.cash * 0.35 + s.employees.size * 220_000 + s.hype * 140_000 +
-            s.waitlist * 18 + s.models.size * 520_000 + s.fakeBenches * 1_800_000 +
-            s.quality * 90_000 + s.gpus * 40_000
-        return max(50_000.0, base * boost)
+        val arr = dailyRevenue(s) * 365
+        val multiple = Content.cycleMultiple(s.market) * (1 + s.hype / 220) * (1 - s.scandal / 280) * if (s.listed) 0.85 else 1.0
+        val narrative = s.hype * 18_000 + s.models.size * 180_000 + s.gpus * 22_000
+        val cash = max(0.0, s.cash) * 0.55
+        val listed = if (s.listed) s.stockPrice * s.shares else 0.0
+        val privateVal = max(80_000.0, arr * max(4.0, multiple) + narrative + cash)
+        return if (s.listed) max(privateVal * 0.35, listed) else privateVal
     }
 
     fun create(company: String, seed: Long = System.currentTimeMillis()): GameState {
         val name = company.ifBlank { Content.companySeeds[(seed % Content.companySeeds.size).toInt()] }
-        val founder = Employee("founder", "researcher", "You", 0)
+        val founder = Employee("founder", "researcher", "You", 0, 78.0)
+        val rivals = Content.rivals.mapIndexed { i, n ->
+            Competitor("riv-$i", n, 6.0 + ((seed shr (i * 3)) % 12), 400_000.0 + ((seed shr (i * 5)) % 900_000))
+        }
         var s = GameState(
             seed = seed, rng = seed.toInt(), day = 0, speed = 1, company = name,
-            cash = 48_000.0, equity = 1.0, hype = 7.0, quality = 5.0, research = 4.0,
-            compute = 12.0, gpus = 0, scandal = 0.0, heat = 4.0, evil = 0.0, valuation = 250_000.0,
+            cash = 110_000.0, equity = 1.0, hype = 8.0, quality = 6.0, research = 14.0,
+            compute = 48.0, gpus = 1, scandal = 0.0, heat = 3.0, evil = 0.0, valuation = 280_000.0,
             lastRound = null, nextRound = "friends", pivots = 0, lastPivotDay = -90,
             gpuShortageUntil = 0, employees = listOf(founder), training = null, models = emptyList(),
+            products = emptyList(), users = 0, revenueToday = 0.0, listed = false, stockPrice = 0.0,
+            shares = 10_000_000, market = "quiet", marketDaysLeft = 48, competitors = rivals,
+            gpuOrders = emptyList(), morale = 74.0,
             demoCooldown = 0, waitlistCooldown = 0, stealCooldown = 0, fakeCooldown = 0,
-            news = emptyList(), eventId = null, waitlist = 120, papersStolen = 0, fakeBenches = 0,
+            news = emptyList(), eventId = null, waitlist = 90, papersStolen = 0, fakeBenches = 0,
             daysBroke = 0, flags = emptyMap(), ending = null, acquireOffer = 0.0,
             lastRealMs = System.currentTimeMillis(),
         )
-        s = news(s, "${s.company} opens in a garage. The first GPU is a metaphor.")
+        s = news(s, "${s.company} opens in a garage. One card is already humming.")
         return s.copy(valuation = valuation(s))
     }
 
     fun tickDay(state: GameState): GameState {
         if (state.ending != null || state.eventId != null) return state
         var s = state.copy(day = state.day + 1)
-        val (salary, research, eff) = totals(s)
-        val burn = salary / 30.0 + s.gpus * GPU_POWER
-        s = s.copy(cash = s.cash - burn)
+        val t = totals(s)
+        val burn = dailyBurn(s)
+
+        val arrived = s.gpuOrders.filter { it.remaining <= 1 }
+        val pending = s.gpuOrders.map { it.copy(remaining = it.remaining - 1) }.filter { it.remaining > 0 }
+        if (arrived.isNotEmpty()) {
+            val qty = arrived.sumOf { it.qty }
+            s = news(s.copy(gpus = s.gpus + qty, gpuOrders = pending), "$qty accelerator${if (qty > 1) "s" else ""} landed.", "good")
+        } else s = s.copy(gpuOrders = pending)
+
         val shortage = s.day < s.gpuShortageUntil
-        val gpuYield = s.gpus * (if (shortage) 0.35 else 1.15) * eff
-        val hypeAdd = s.employees.sumOf { e -> Content.roles.find { it.id == e.roleId }?.hype ?: 0.0 }
-        val qAdd = s.employees.sumOf { e -> Content.roles.find { it.id == e.roleId }?.quality ?: 0.0 }
-        val heatAdd = s.employees.sumOf { e -> Content.roles.find { it.id == e.roleId }?.heat ?: 0.0 }
-        val scDec = s.employees.sumOf { e -> Content.roles.find { it.id == e.roleId }?.scandalDecay ?: 0.0 }
+        val gpuYield = s.gpus * (if (shortage) 0.32 else GPU_YIELD) * t.eff
         s = s.copy(
             compute = s.compute + gpuYield,
-            research = s.research + research,
-            hype = clamp(s.hype + hypeAdd - HYPE_DECAY, 0.0, 100.0),
-            quality = clamp(s.quality + qAdd * 0.25, 0.0, 100.0),
-            heat = clamp(s.heat + heatAdd * 0.25, 0.0, 100.0),
-            scandal = clamp(s.scandal - scDec * 0.2 - 0.08, 0.0, 100.0),
+            research = s.research + t.research,
+            hype = clamp(s.hype + t.hype - HYPE_DECAY - s.scandal * 0.012, 0.0, 100.0),
+            quality = clamp(s.quality + t.quality * 0.18, 0.0, 100.0),
+            heat = clamp(s.heat + t.heat * 0.2 - 0.04, 0.0, 100.0),
+            scandal = clamp(s.scandal - t.scandalDecay * 0.18 - 0.05, 0.0, 100.0),
+            morale = clamp(s.morale + (if (s.cash > burn * 40) 0.04 else -0.08), 0.0, 100.0),
             demoCooldown = max(0, s.demoCooldown - 1),
             waitlistCooldown = max(0, s.waitlistCooldown - 1),
             stealCooldown = max(0, s.stealCooldown - 1),
             fakeCooldown = max(0, s.fakeCooldown - 1),
-            waitlist = (s.waitlist * 1.002 + s.hype * 0.8).toInt(),
         )
+
+        s = tickProducts(s)
+        s = s.copy(cash = s.cash + s.revenueToday - burn)
+
         s.training?.let { job ->
             val rem = job.remaining - 1
             s = if (rem <= 0) {
                 val spec = Content.models.first { it.id == job.specId }
-                val q = clamp(
-                    spec.qualityCap * 0.45 + s.quality * 0.35 +
-                        (min(s.research, spec.researchNeed.toDouble()) / spec.researchNeed) * 12,
-                    3.0, spec.qualityCap.toDouble(),
-                )
+                val ratio = min(1.0, s.research / max(1.0, spec.researchNeed.toDouble()))
+                val q = clamp(spec.qualityCap * 0.38 + s.quality * 0.32 + ratio * 16, 4.0, spec.qualityCap.toDouble())
                 news(
                     s.copy(
-                        models = s.models + FinishedModel("m-${s.day}-${spec.id}", spec.id, q, false, false),
+                        models = s.models + FinishedModel("m-${s.day}-${spec.id}", spec.id, q, false, false, false),
                         training = null,
-                        research = max(0.0, s.research - spec.researchNeed * 0.4),
+                        research = max(0.0, s.research - spec.researchNeed * 0.28),
                     ),
-                    "${spec.name} finished training. Eval loss is a vibe.",
+                    "${spec.name} finished training.",
                     "good",
                 )
             } else s.copy(training = job.copy(remaining = rem))
         }
+
+        s = tickMarket(s)
+        s = tickRivals(s)
+        if (s.listed) {
+            val fair = valuation(s.copy(listed = false)) / max(1, s.shares)
+            val noise = (s.hype - 40) / 8000.0 - s.scandal / 12000.0
+            s = s.copy(stockPrice = max(0.4, s.stockPrice * 0.97 + fair * 0.03 + noise * s.stockPrice))
+        }
         s = s.copy(valuation = valuation(s))
-        s = endings(s)
+        s = fails(s)
         if (s.ending == null) s = maybeEvent(s)
+        if (s.day > 0 && s.day % 30 == 0) {
+            s = news(s, "Month close. Burn ${burn.roundToInt()}/day. Rev ${s.revenueToday.roundToInt()}/day.")
+        }
         return s
     }
 
-    private fun endings(s: GameState): GameState {
+    private fun tickProducts(s: GameState): GameState {
+        if (s.products.isEmpty()) {
+            val organic = s.waitlist * 0.0018 + s.hype * 0.35
+            return s.copy(waitlist = (s.waitlist + organic).toInt(), users = 0, revenueToday = 0.0)
+        }
+        val t = totals(s)
+        val churn = clamp(0.006 - s.quality / 2800 + s.scandal / 4200 - t.product * 0.002, 0.001, 0.03)
+        val growth = 0.0016 + s.hype / 14000 + t.product * 0.003
+        val convert = min(s.waitlist * (0.01 + s.hype / 2500), s.waitlist * 0.08)
+        val products = s.products.map { p ->
+            p.copy(users = max(0, (p.users * (1 + growth - churn) + convert / s.products.size).toInt()))
+        }
+        val users = products.sumOf { it.users }
+        val next = s.copy(products = products, users = users, waitlist = max(0, (s.waitlist - convert + s.hype * 0.45).toInt()))
+        return next.copy(revenueToday = dailyRevenue(next))
+    }
+
+    private fun tickMarket(s: GameState): GameState {
+        if (s.marketDaysLeft > 1) return s.copy(marketDaysLeft = s.marketDaysLeft - 1)
+        val (n, v) = roll(s)
+        val next = when (s.market) {
+            "mania" -> if (v < 0.7) "boom" else "winter"
+            "boom" -> if (v < 0.45) "mania" else if (v < 0.75) "quiet" else "winter"
+            "quiet" -> if (v < 0.35) "boom" else if (v < 0.78) "quiet" else "winter"
+            else -> if (v < 0.55) "quiet" else "winter"
+        }
+        val dur = 40 + (v * 70).toInt()
+        var out = n.copy(market = next, marketDaysLeft = dur)
+        if (next != s.market) out = news(out, "Tape shift: ${Content.cycleTitle(next)}.", if (next == "winter") "bad" else "ok")
+        return out
+    }
+
+    private fun tickRivals(s: GameState): GameState {
+        val (n, r) = roll(s)
+        var out = n.copy(
+            competitors = n.competitors.mapIndexed { i, c ->
+                val drift = (r - 0.45) * 0.4 + i * 0.05
+                val hype = clamp(c.hype + drift, 2.0, 96.0)
+                val growth = 1 + when (n.market) { "mania" -> 0.012; "boom" -> 0.007; "winter" -> -0.004; else -> 0.002 }
+                c.copy(hype = hype, valuation = max(120_000.0, c.valuation * growth * (1 + hype / 800)))
+            },
+        )
+        if (out.day > 20 && out.day % 37 == 0 && out.competitors.isNotEmpty()) {
+            val rival = out.competitors[out.day % out.competitors.size]
+            out = news(out, "${rival.name} just raised into the same tape.")
+        }
+        return out
+    }
+
+    private fun fails(s: GameState): GameState {
         if (s.ending != null) return s
-        if (s.scandal >= 92 && s.evil >= 40) return s.copy(ending = "indicted", speed = 0)
-        if (s.quality >= 62 && s.scandal < 28 && s.day >= 80) return s.copy(ending = "useful", speed = 0)
+        if (s.scandal >= 96 && s.evil >= 52) return s.copy(ending = "indicted", speed = 0)
         if (s.cash < 0) {
             val broke = s.daysBroke + 1
             return if (broke >= BROKE_LIMIT) s.copy(daysBroke = broke, ending = "bankrupt", speed = 0)
@@ -183,26 +285,25 @@ object Engine {
 
     private fun maybeEvent(state: GameState): GameState {
         if (state.eventId != null || state.ending != null) return state
-        if (state.day == 0 || state.day % 6 != 0) return state
+        if (state.day < 12 || state.day % 18 != 0) return state
         val (s0, r) = roll(state)
-        val chance = 0.38 + s0.evil * 0.004 + s0.hype * 0.0015 + s0.scandal * 0.002
+        val chance = 0.22 + s0.evil * 0.002 + s0.hype * 0.001 + s0.scandal * 0.0015
         if (r > chance) return s0
         val eligible = Content.events.filter { ev ->
             s0.day >= ev.minDay && when (ev.id) {
-                "nyt" -> s0.hype >= 20
+                "nyt" -> s0.hype >= 18
                 "live-demo", "weights-leak" -> s0.models.isNotEmpty()
-                "acquire-sniff" -> s0.valuation >= 12_000_000 && s0.lastRound != null
-                "board-pivot" -> s0.lastRound in listOf("seed", "a", "b")
-                "benchmark" -> s0.fakeBenches > 0 || s0.hype >= 30
+                "acquire-sniff" -> s0.valuation >= 10_000_000 && s0.lastRound != null && !s0.listed
+                "benchmark" -> s0.fakeBenches > 0 || s0.hype >= 28
                 "talent-raid" -> s0.employees.size >= 3
-                "cloud-bill" -> s0.gpus >= 1 || s0.compute >= 20
-                "safety-walkout" -> s0.heat >= 30 || s0.evil >= 20
-                "gov" -> s0.hype >= 40 && s0.valuation >= 80_000_000
+                "cloud-bill" -> s0.gpus >= 1 || s0.compute >= 24
+                "safety-walkout" -> s0.heat >= 28 || s0.evil >= 18
+                "gov" -> s0.hype >= 36 && s0.valuation >= 60_000_000
                 "paper-theft" -> s0.papersStolen > 0
-                "waitlist-fake" -> s0.waitlist >= 4000
-                "useful-fork" -> s0.quality >= 18
+                "useful-fork" -> s0.quality >= 16
+                "earnings" -> s0.listed
                 else -> true
-            } && (ev.id in listOf("gpu-shortage", "cloud-bill") || s0.flags["ev-${ev.id}"] != true)
+            } && (ev.id in listOf("gpu-shortage", "cloud-bill", "earnings") || s0.flags["ev-${ev.id}"] != true)
         }
         if (eligible.isEmpty()) return s0
         val sum = eligible.sumOf { it.weight }
@@ -223,94 +324,130 @@ object Engine {
         if (s.cash < role.signing) return s.copy(toast = "Need a signing bonus.")
         val (a, v1) = roll(s)
         val (b, v2) = roll(a)
-        val name = "${Content.firstNames[(v1 * Content.firstNames.size).toInt()]} ${Content.lastNames[(v2 * Content.lastNames.size).toInt()]}"
-        val person = Employee("e-${b.day}-${b.employees.size}", roleId, name, b.day)
-        return news(b.copy(cash = b.cash - role.signing, employees = b.employees + person, toast = "$name is in."), "$name joins as ${role.name}.", "good")
-            .copy(valuation = valuation(b), toast = "$name is in.")
+        val name = "${Content.firstNames[(v1 * Content.firstNames.size).toInt() % Content.firstNames.size]} ${Content.lastNames[(v2 * Content.lastNames.size).toInt() % Content.lastNames.size]}"
+        val person = Employee("e-${b.day}-${b.employees.size}", roleId, name, b.day, 72.0)
+        return news(b.copy(cash = b.cash - role.signing, employees = b.employees + person, morale = clamp(b.morale + 1.5, 0.0, 100.0), toast = "$name is in.", valuation = valuation(b)), "$name joins as ${role.name}.", "good")
     }
 
     fun fire(s: GameState, id: String): GameState {
         if (id == "founder") return s.copy(toast = "You cannot fire yourself.")
         val emp = s.employees.find { it.id == id } ?: return s
-        return news(s.copy(employees = s.employees.filter { it.id != id }, cash = s.cash - 4000, toast = "${emp.name} packed a box."), "${emp.name} is pursuing other opportunities.", "bad")
+        return news(s.copy(employees = s.employees.filter { it.id != id }, cash = s.cash - 3500, morale = clamp(s.morale - 8, 0.0, 100.0), toast = "${emp.name} packed a box."), "${emp.name} is pursuing other opportunities.", "bad")
     }
 
     fun buyGpu(s: GameState): GameState {
         if (s.day < s.gpuShortageUntil) return s.copy(toast = "Shortage.")
         if (s.cash < GPU_COST) return s.copy(toast = "Not enough cash for silicon.")
-        return news(s.copy(cash = s.cash - GPU_COST, gpus = s.gpus + 1, toast = "Cards inbound."), "Acquired an accelerator. The room got louder.", "good")
+        return news(s.copy(cash = s.cash - GPU_COST, gpuOrders = s.gpuOrders + GpuOrder(1, GPU_LEAD), toast = "Cards inbound."), "Ordered an accelerator. ${GPU_LEAD} days out.")
     }
 
     fun burst(s: GameState): GameState {
-        val cost = if (s.day < s.gpuShortageUntil) CLOUD_BURST * 3 else CLOUD_BURST
+        val cost = if (s.day < s.gpuShortageUntil) CLOUD_BURST * 2.4 else CLOUD_BURST.toDouble()
         if (s.cash < cost) return s.copy(toast = "Cloud would like to be paid first.")
-        return news(s.copy(cash = s.cash - cost, compute = s.compute + 28, toast = "Burst scheduled."), "Rented a burst of someone else's cluster.")
+        return news(s.copy(cash = s.cash - cost, compute = s.compute + 42, toast = "Burst scheduled."), "Rented a burst of someone else's cluster.")
     }
 
     fun train(s: GameState, specId: String): GameState {
         if (s.training != null) return s.copy(toast = "A job is already on the cluster.")
         val spec = Content.models.find { it.id == specId } ?: return s
+        if (!Content.unlocked(spec, s)) return s.copy(toast = "Not unlocked yet.")
         if (s.research < spec.researchNeed) return s.copy(toast = "Need more research.")
         if (s.compute < spec.compute) return s.copy(toast = "Need more compute.")
-        return news(
-            s.copy(compute = s.compute - spec.compute, training = ModelJob(specId, spec.days, spec.days), toast = "${spec.name} is cooking."),
-            "Training ${spec.name}.",
-        )
+        return news(s.copy(compute = s.compute - spec.compute, training = ModelJob(specId, spec.days, spec.days), toast = "${spec.name} is cooking."), "Training ${spec.name}.")
     }
 
     fun demo(s: GameState, modelId: String): GameState {
         if (s.demoCooldown > 0) return s.copy(toast = "Demo team is recovering.")
         val model = s.models.find { it.id == modelId } ?: return s.copy(toast = "No such weights.")
         val spec = Content.models.first { it.id == model.specId }
-        val demoBoost = s.employees.sumOf { e -> Content.roles.find { it.id == e.roleId }?.demoBoost ?: 0.0 }
+        val t = totals(s)
         val (n, r) = roll(s)
-        val chance = clamp(0.28 + demoBoost + model.quality / 140 + n.hype / 220 - n.heat / 180, 0.08, 0.92)
+        val chance = clamp(0.24 + t.demo + model.quality / 160 + n.hype / 260 - n.heat / 200, 0.08, 0.9)
         val viral = r < chance
-        val flop = r > chance + 0.35
-        val gain = spec.hypeOnShip * if (viral) (if (flop) 0.2 else 1.0) else 0.35
+        val flop = r > chance + 0.38
+        val gain = spec.hypeOnShip * if (viral) 1.0 else if (flop) 0.15 else 0.4
         var out = n.copy(
             hype = clamp(n.hype + gain, 0.0, 100.0),
-            demoCooldown = 9,
+            demoCooldown = 12,
             models = n.models.map { if (it.id == modelId) it.copy(shipped = true) else it },
-            waitlist = n.waitlist + if (viral) 3500 + (n.hype * 40).toInt() else 400,
+            waitlist = n.waitlist + if (viral) 2800 + (n.hype * 28).toInt() else if (flop) 180 else 520,
         )
         out = when {
-            flop -> news(out.copy(heat = clamp(out.heat + 8, 0.0, 100.0), toast = "It flopped."), "Live demo of ${spec.name} ate itself.", "bad")
+            flop -> news(out.copy(heat = clamp(out.heat + 6, 0.0, 100.0), toast = "It flopped."), "Live demo of ${spec.name} ate itself.", "bad")
             viral -> news(out.copy(toast = "It went viral."), "${spec.name} demo went feral.", "good")
             else -> news(out.copy(toast = "Polite applause."), "${spec.name} demo was fine.")
         }
         return out.copy(valuation = valuation(out))
     }
 
+    fun launch(s: GameState, modelId: String): GameState {
+        val model = s.models.find { it.id == modelId } ?: return s.copy(toast = "Train something first.")
+        if (model.launched) return s.copy(toast = "Already a product.")
+        if (!model.shipped) return s.copy(toast = "Demo it before you bill for it.")
+        val spec = Content.models.first { it.id == model.specId }
+        val convert = (s.waitlist * clamp(0.12 + model.quality / 220 + s.hype / 400, 0.06, 0.42)).toInt()
+        val product = Product("p-${s.day}-${spec.id}", spec.name, modelId, max(40, convert), spec.arpu * (0.7 + model.quality / 200), model.quality)
+        var out = s.copy(
+            products = s.products + product,
+            models = s.models.map { if (it.id == modelId) it.copy(launched = true) else it },
+            waitlist = max(0, s.waitlist - convert),
+            users = s.users + product.users,
+            quality = clamp(s.quality + 2, 0.0, 100.0),
+            toast = "${spec.name} is live.",
+        )
+        out = out.copy(revenueToday = dailyRevenue(out), valuation = valuation(out))
+        return news(out, "Launched ${spec.name}. ${product.users} users walked in.", "good")
+    }
+
     fun raise(s: GameState): GameState {
-        val round = Content.rounds.find { it.id == s.nextRound } ?: return s.copy(toast = "No round left.")
+        val round = Content.rounds.find { it.id == s.nextRound } ?: return s.copy(toast = "No round on the calendar.")
         if (s.hype < round.minHype) return s.copy(toast = "Need more hype.")
         if (s.valuation < round.minValuation) return s.copy(toast = "Valuation is not a story yet.")
         if (round.id == "ipo") {
-            return news(s.copy(lastRound = "ipo", ending = "ipo", speed = 0, equity = s.equity * (1 - round.dilution), toast = "You are public."), "S-1 filed.", "good")
+            val primary = (s.valuation * 0.11).roundToInt().toDouble()
+            val listed = s.copy(
+                lastRound = "ipo", nextRound = "secondary", listed = true,
+                cash = s.cash + primary, equity = s.equity * (1 - round.dilution),
+                shares = (s.shares * (1 + round.dilution)).roundToInt(),
+                stockPrice = s.valuation / max(1, s.shares),
+                hype = clamp(s.hype + 8, 0.0, 100.0),
+                toast = "You are public. The company keeps going.",
+            )
+            return news(listed.copy(valuation = valuation(listed)), "S-1 effective. ${s.company} is public.", "good")
+        }
+        if (round.id == "secondary") {
+            if (!s.listed) return s.copy(toast = "List first.")
+            val raiseAmt = (s.valuation * 0.07).roundToInt().toDouble()
+            val out = s.copy(
+                cash = s.cash + raiseAmt, lastRound = "secondary", nextRound = "secondary",
+                equity = s.equity * (1 - round.dilution),
+                shares = (s.shares * (1 + round.dilution)).roundToInt(),
+                stockPrice = s.stockPrice * 0.97, toast = "Follow-on is in.",
+            )
+            return news(out.copy(valuation = valuation(out)), "Follow-on closed.", "good")
         }
         val idx = Content.rounds.indexOfFirst { it.id == round.id } + 1
         val next = Content.rounds.getOrNull(idx)?.id ?: "ipo"
+        val boost = when (s.market) { "mania" -> 1.18; "boom" -> 1.08; "winter" -> 0.78; else -> 1.0 }
+        val raiseAmt = (round.raise * boost).roundToInt().toDouble()
         val out = s.copy(
-            cash = s.cash + round.raise,
-            equity = s.equity * (1 - round.dilution),
-            lastRound = round.id,
-            nextRound = next,
-            hype = clamp(s.hype + 6, 0.0, 100.0),
+            cash = s.cash + raiseAmt, equity = s.equity * (1 - round.dilution),
+            lastRound = round.id, nextRound = next,
+            hype = clamp(s.hype + 5, 0.0, 100.0), morale = clamp(s.morale + 6, 0.0, 100.0),
             toast = "${round.name} is in the bank.",
         )
         return news(out.copy(valuation = valuation(out)), "Closed ${round.name}.", "good")
     }
 
     fun pivot(s: GameState): GameState {
-        if (s.day - s.lastPivotDay < 70) return s.copy(toast = "You just pivoted.")
+        if (s.day - s.lastPivotDay < 90) return s.copy(toast = "You just pivoted.")
         var out = s.copy(
             pivots = s.pivots + 1, lastPivotDay = s.day,
-            quality = clamp(s.quality * 0.35, 1.0, 20.0),
-            hype = clamp(s.hype + 10 - s.pivots * 2.0, 0.0, 100.0),
-            research = s.research * 0.55, toast = "You pivoted. Again.",
+            quality = clamp(s.quality * 0.42, 2.0, 22.0),
+            hype = clamp(s.hype + 8 - s.pivots * 1.5, 0.0, 100.0),
+            research = s.research * 0.62, toast = "You pivoted.",
         )
-        if (s.pivots >= 4) out = out.copy(scandal = clamp(out.scandal + 8, 0.0, 100.0))
+        if (s.pivots >= 4) out = out.copy(scandal = clamp(out.scandal + 6, 0.0, 100.0))
         return news(out, "New thesis. Same GPUs.")
     }
 
@@ -319,10 +456,10 @@ object Engine {
         if (s.employees.none { it.roleId == "researcher" || it.roleId == "mill" }) return s.copy(toast = "Need someone who can read a PDF.")
         val (n, r) = roll(s)
         val mill = n.employees.count { it.roleId == "mill" }
-        var out = n.copy(research = n.research + 28 + mill * 8, evil = n.evil + 6, papersStolen = n.papersStolen + 1, stealCooldown = 12)
-        return if (r < 0.22 + out.papersStolen * 0.04) {
-            news(out.copy(scandal = clamp(out.scandal + 14, 0.0, 100.0), toast = "Stolen — and noticed."), "You lifted a paper.", "evil")
-        } else news(out.copy(toast = "Knowledge, acquired."), "A related work section appeared overnight.", "evil")
+        var out = n.copy(research = n.research + 22 + mill * 7, evil = n.evil + 5, papersStolen = n.papersStolen + 1, stealCooldown = 16)
+        return if (r < 0.2 + out.papersStolen * 0.035) {
+            news(out.copy(scandal = clamp(out.scandal + 12, 0.0, 100.0), toast = "Stolen — and noticed."), "You lifted a paper.", "evil")
+        } else news(out.copy(toast = "Knowledge, acquired."), "A related-work section appeared overnight.", "evil")
     }
 
     fun fake(s: GameState, modelId: String): GameState {
@@ -330,19 +467,19 @@ object Engine {
         if (s.models.none { it.id == modelId }) return s.copy(toast = "Train something first.")
         val (n, r) = roll(s)
         var out = n.copy(
-            hype = clamp(n.hype + 14, 0.0, 100.0), evil = n.evil + 8, fakeBenches = n.fakeBenches + 1,
-            fakeCooldown = 16, models = n.models.map { if (it.id == modelId) it.copy(fakeBench = true) else it },
+            hype = clamp(n.hype + 11, 0.0, 100.0), evil = n.evil + 7, fakeBenches = n.fakeBenches + 1,
+            fakeCooldown = 20, models = n.models.map { if (it.id == modelId) it.copy(fakeBench = true) else it },
         )
         out = out.copy(valuation = valuation(out))
-        return if (r < 0.3) news(out.copy(scandal = clamp(out.scandal + 10, 0.0, 100.0), toast = "The chart is a fiction."), "SOTA claimed.", "evil")
+        return if (r < 0.28) news(out.copy(scandal = clamp(out.scandal + 9, 0.0, 100.0), toast = "The chart is a fiction."), "SOTA claimed.", "evil")
         else news(out.copy(toast = "Leaderboard updated itself."), "New SOTA.", "evil")
     }
 
     fun farm(s: GameState): GameState {
         if (s.waitlistCooldown > 0) return s.copy(toast = "The ads are still running.")
-        if (s.cash < 6000) return s.copy(toast = "Engagement farming is not free.")
+        if (s.cash < 8000) return s.copy(toast = "Engagement farming is not free.")
         return news(
-            s.copy(cash = s.cash - 6000, waitlist = s.waitlist + 9000, hype = clamp(s.hype + 5, 0.0, 100.0), quality = clamp(s.quality - 1.5, 0.0, 100.0), waitlistCooldown = 8, evil = s.evil + 2, toast = "Funnel go brrr."),
+            s.copy(cash = s.cash - 8000, waitlist = s.waitlist + 5200, hype = clamp(s.hype + 3.5, 0.0, 100.0), quality = clamp(s.quality - 1.2, 0.0, 100.0), waitlistCooldown = 12, evil = s.evil + 1.5, toast = "Funnel is loud."),
             "Waitlist ads. Half are bots.",
             "evil",
         ).let { it.copy(valuation = valuation(it)) }
@@ -351,7 +488,7 @@ object Engine {
     fun choose(s: GameState, choiceId: String): GameState {
         if (s.eventId == "acquire-close") {
             return if (choiceId == "take") news(s.copy(ending = "acquired", eventId = null, speed = 0, toast = "You sold."), "Acquired.", "good")
-            else news(s.copy(eventId = null, speed = 1, hype = clamp(s.hype + 4, 0.0, 100.0), toast = "Independence, expensive."), "You walked.")
+            else news(s.copy(eventId = null, speed = 1, hype = clamp(s.hype + 3, 0.0, 100.0), toast = "Independence, expensive."), "You walked.")
         }
         val choice = Content.choices(s.eventId ?: return s).find { it.id == choiceId } ?: return s.copy(eventId = null, speed = 1)
         var out = applyEffect(s.copy(eventId = null, speed = 1), choice.effects)

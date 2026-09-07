@@ -15,22 +15,38 @@ export function unlockAudio() {
   if (c && c.state === "suspended") void c.resume();
 }
 
-export function blip(kind: "ok" | "good" | "bad" | "evil" = "ok") {
+function tone(freq: number, dur: number, type: OscillatorType, gain = 0.045, slide = 1.25) {
   const c = ac();
   if (!c) return;
   if (c.state === "suspended") void c.resume();
   const t = c.currentTime;
   const o = c.createOscillator();
   const g = c.createGain();
-  o.type = kind === "evil" ? "sawtooth" : "triangle";
-  const f = kind === "good" ? 620 : kind === "bad" ? 180 : kind === "evil" ? 140 : 420;
-  o.frequency.setValueAtTime(f, t);
-  o.frequency.exponentialRampToValueAtTime(kind === "bad" ? 90 : f * 1.35, t + 0.09);
+  o.type = type;
+  o.frequency.setValueAtTime(freq, t);
+  o.frequency.exponentialRampToValueAtTime(Math.max(40, freq * slide), t + dur);
   g.gain.setValueAtTime(0.0001, t);
-  g.gain.exponentialRampToValueAtTime(0.05, t + 0.02);
-  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
+  g.gain.exponentialRampToValueAtTime(gain, t + 0.018);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
   o.connect(g);
   g.connect(c.destination);
   o.start(t);
-  o.stop(t + 0.18);
+  o.stop(t + dur + 0.02);
+}
+
+export function blip(kind: "ok" | "good" | "bad" | "evil" = "ok") {
+  if (kind === "good") {
+    tone(520, 0.12, "triangle", 0.04, 1.4);
+    tone(780, 0.16, "sine", 0.025, 1.1);
+    return;
+  }
+  if (kind === "bad") {
+    tone(180, 0.18, "square", 0.03, 0.55);
+    return;
+  }
+  if (kind === "evil") {
+    tone(140, 0.2, "sawtooth", 0.03, 0.7);
+    return;
+  }
+  tone(420, 0.12, "triangle", 0.04, 1.28);
 }

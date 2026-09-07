@@ -20,7 +20,7 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         Save.load(app)?.let { loaded ->
             if (loaded.ending == null) {
                 val elapsed = System.currentTimeMillis() - loaded.lastRealMs
-                val days = (elapsed / 900).toInt().coerceAtMost(36)
+                val days = (elapsed / 3400).toInt().coerceAtMost(20)
                 var s = loaded
                 if (days >= 2) repeat(days) { if (s.ending == null && s.eventId == null) s = Engine.tickDay(s) }
                 _state.value = s.copy(lastRealMs = System.currentTimeMillis())
@@ -28,7 +28,7 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         }
         viewModelScope.launch {
             while (isActive) {
-                delay(850)
+                delay(3400)
                 val cur = _state.value ?: continue
                 if (cur.speed > 0 && cur.eventId == null && cur.ending == null) {
                     var s = cur
@@ -59,6 +59,7 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
     fun burst() { _state.value?.let { commit(Engine.burst(it)) } }
     fun train(id: String) { _state.value?.let { commit(Engine.train(it, id)) } }
     fun demo(id: String) { _state.value?.let { commit(Engine.demo(it, id)) } }
+    fun launch(id: String) { _state.value?.let { commit(Engine.launch(it, id)) } }
     fun raise() { _state.value?.let { commit(Engine.raise(it)) } }
     fun pivot() { _state.value?.let { commit(Engine.pivot(it)) } }
     fun steal() { _state.value?.let { commit(Engine.steal(it)) } }

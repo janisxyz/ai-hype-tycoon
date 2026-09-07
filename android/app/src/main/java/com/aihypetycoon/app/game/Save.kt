@@ -6,10 +6,11 @@ import org.json.JSONObject
 
 object Save {
     private const val PREF = "ai_hype_tycoon"
-    private const val KEY = "save_v1"
+    private const val KEY = "save_v2"
 
     fun load(ctx: Context): GameState? {
-        val raw = ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE).getString(KEY, null) ?: return null
+        val prefs = ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE)
+        val raw = prefs.getString(KEY, null) ?: prefs.getString("save_v1", null) ?: return null
         return try {
             fromJson(JSONObject(raw))
         } catch (_: Exception) {
@@ -22,11 +23,11 @@ object Save {
     }
 
     fun clear(ctx: Context) {
-        ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE).edit().remove(KEY).apply()
+        ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE).edit().remove(KEY).remove("save_v1").apply()
     }
 
     private fun toJson(s: GameState) = JSONObject().apply {
-        put("seed", s.seed); put("rng", s.rng); put("day", s.day); put("speed", s.speed)
+        put("version", 2); put("seed", s.seed); put("rng", s.rng); put("day", s.day); put("speed", s.speed)
         put("company", s.company); put("cash", s.cash); put("equity", s.equity)
         put("hype", s.hype); put("quality", s.quality); put("research", s.research)
         put("compute", s.compute); put("gpus", s.gpus); put("scandal", s.scandal)
@@ -36,7 +37,7 @@ object Save {
         put("gpuShortageUntil", s.gpuShortageUntil)
         put("employees", JSONArray().also { arr ->
             s.employees.forEach { e ->
-                arr.put(JSONObject().put("id", e.id).put("roleId", e.roleId).put("name", e.name).put("hiredOn", e.hiredOn))
+                arr.put(JSONObject().put("id", e.id).put("roleId", e.roleId).put("name", e.name).put("hiredOn", e.hiredOn).put("morale", e.morale))
             }
         })
         s.training?.let {
@@ -44,8 +45,24 @@ object Save {
         }
         put("models", JSONArray().also { arr ->
             s.models.forEach { m ->
-                arr.put(JSONObject().put("id", m.id).put("specId", m.specId).put("quality", m.quality).put("shipped", m.shipped).put("fakeBench", m.fakeBench))
+                arr.put(JSONObject().put("id", m.id).put("specId", m.specId).put("quality", m.quality).put("shipped", m.shipped).put("fakeBench", m.fakeBench).put("launched", m.launched))
             }
+        })
+        put("products", JSONArray().also { arr ->
+            s.products.forEach { p ->
+                arr.put(JSONObject().put("id", p.id).put("name", p.name).put("modelId", p.modelId).put("users", p.users).put("arpu", p.arpu).put("quality", p.quality))
+            }
+        })
+        put("users", s.users); put("revenueToday", s.revenueToday); put("listed", s.listed)
+        put("stockPrice", s.stockPrice); put("shares", s.shares); put("market", s.market)
+        put("marketDaysLeft", s.marketDaysLeft); put("morale", s.morale)
+        put("competitors", JSONArray().also { arr ->
+            s.competitors.forEach { c ->
+                arr.put(JSONObject().put("id", c.id).put("name", c.name).put("hype", c.hype).put("valuation", c.valuation))
+            }
+        })
+        put("gpuOrders", JSONArray().also { arr ->
+            s.gpuOrders.forEach { o -> arr.put(JSONObject().put("qty", o.qty).put("remaining", o.remaining)) }
         })
         put("demoCooldown", s.demoCooldown); put("waitlistCooldown", s.waitlistCooldown)
         put("stealCooldown", s.stealCooldown); put("fakeCooldown", s.fakeCooldown)
@@ -67,14 +84,35 @@ object Save {
             val a = arr("employees")
             for (i in 0 until a.length()) {
                 val e = a.getJSONObject(i)
-                add(Employee(e.getString("id"), e.getString("roleId"), e.getString("name"), e.optInt("hiredOn")))
+                add(Employee(e.getString("id"), e.getString("roleId"), e.getString("name"), e.optInt("hiredOn"), e.optDouble("morale", 72.0)))
             }
         }
         val models = buildList {
             val a = arr("models")
             for (i in 0 until a.length()) {
                 val m = a.getJSONObject(i)
-                add(FinishedModel(m.getString("id"), m.getString("specId"), m.optDouble("quality"), m.optBoolean("shipped"), m.optBoolean("fakeBench")))
+                add(FinishedModel(m.getString("id"), m.getString("specId"), m.optDouble("quality"), m.optBoolean("shipped"), m.optBoolean("fakeBench"), m.optBoolean("launched")))
+            }
+        }
+        val products = buildList {
+            val a = arr("products")
+            for (i in 0 until a.length()) {
+                val p = a.getJSONObject(i)
+                add(Product(p.getString("id"), p.optString("name"), p.optString("modelId"), p.optInt("users"), p.optDouble("arpu"), p.optDouble("quality")))
+            }
+        }
+        val competitors = buildList {
+            val a = arr("competitors")
+            for (i in 0 until a.length()) {
+                val c = a.getJSONObject(i)
+                add(Competitor(c.getString("id"), c.getString("name"), c.optDouble("hype"), c.optDouble("valuation")))
+            }
+        }
+        val orders = buildList {
+            val a = arr("gpuOrders")
+            for (i in 0 until a.length()) {
+                val g = a.getJSONObject(i)
+                add(GpuOrder(g.optInt("qty"), g.optInt("remaining")))
             }
         }
         val news = buildList {
@@ -97,7 +135,11 @@ object Save {
             pivots = o.optInt("pivots"), lastPivotDay = o.optInt("lastPivotDay", -90), gpuShortageUntil = o.optInt("gpuShortageUntil"),
             employees = employees.ifEmpty { listOf(Employee("founder", "researcher", "You", 0)) },
             training = t?.let { ModelJob(it.getString("specId"), it.getInt("remaining"), it.getInt("total")) },
-            models = models, demoCooldown = o.optInt("demoCooldown"), waitlistCooldown = o.optInt("waitlistCooldown"),
+            models = models, products = products, users = o.optInt("users"), revenueToday = o.optDouble("revenueToday"),
+            listed = o.optBoolean("listed"), stockPrice = o.optDouble("stockPrice"), shares = o.optInt("shares", 10_000_000),
+            market = o.optString("market", "quiet"), marketDaysLeft = o.optInt("marketDaysLeft", 40),
+            competitors = competitors, gpuOrders = orders, morale = o.optDouble("morale", 74.0),
+            demoCooldown = o.optInt("demoCooldown"), waitlistCooldown = o.optInt("waitlistCooldown"),
             stealCooldown = o.optInt("stealCooldown"), fakeCooldown = o.optInt("fakeCooldown"), news = news,
             eventId = o.optString("eventId", "").ifBlank { null }, waitlist = o.optInt("waitlist"),
             papersStolen = o.optInt("papersStolen"), fakeBenches = o.optInt("fakeBenches"), daysBroke = o.optInt("daysBroke"),

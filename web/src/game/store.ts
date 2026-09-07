@@ -8,6 +8,7 @@ import {
   farmWaitlist,
   fire,
   hire,
+  launchProduct,
   pivot,
   raiseRound,
   resolveEvent,
@@ -24,7 +25,7 @@ let lastWrite = 0;
 
 function persist(state: GameState) {
   const now = Date.now();
-  if (now - lastWrite < 1200) return;
+  if (now - lastWrite < 1400) return;
   lastWrite = now;
   writeSave(state);
 }
@@ -36,7 +37,6 @@ export interface GameStore {
   newGame: (company: string) => void;
   continueGame: () => boolean;
   abandon: () => void;
-  apply: (next: GameState, toast?: string | null) => void;
   tick: (days?: number) => void;
   hire: (role: RoleId) => void;
   fire: (id: string) => void;
@@ -44,6 +44,7 @@ export interface GameStore {
   burstCloud: () => void;
   train: (id: ModelSpecId) => void;
   demo: (id: string) => void;
+  launch: (id: string) => void;
   raise: () => void;
   pivot: () => void;
   steal: () => void;
@@ -52,6 +53,18 @@ export interface GameStore {
   choose: (id: string) => void;
   setSpeed: (s: Speed) => void;
   clearToast: () => void;
+}
+
+function applyResult(
+  set: (p: Partial<GameStore>) => void,
+  r: { state: GameState; toast: string | null; blocked: string | null },
+) {
+  if (r.blocked) {
+    set({ toast: r.blocked });
+    return;
+  }
+  persist(r.state);
+  set({ state: r.state, toast: r.toast });
 }
 
 export const useGame = create<GameStore>((set, get) => ({
@@ -76,10 +89,6 @@ export const useGame = create<GameStore>((set, get) => ({
     clearSave();
     set({ state: null, toast: null });
   },
-  apply: (next, toast) => {
-    persist(next);
-    set({ state: next, toast: toast ?? get().toast });
-  },
   tick: (days = 1) => {
     const cur = get().state;
     if (!cur || cur.ending || cur.eventId) return;
@@ -89,97 +98,60 @@ export const useGame = create<GameStore>((set, get) => ({
   },
   hire: (role) => {
     const cur = get().state;
-    if (!cur) return;
-    const r = hire(cur, role);
-    if (r.blocked) {
-      set({ toast: r.blocked });
-      return;
-    }
-    persist(r.state);
-    set({ state: r.state, toast: r.toast });
+    if (cur) applyResult(set, hire(cur, role));
   },
   fire: (id) => {
     const cur = get().state;
-    if (!cur) return;
-    const r = fire(cur, id);
-    persist(r.state);
-    set({ state: r.state, toast: r.toast ?? r.blocked });
+    if (cur) applyResult(set, fire(cur, id));
   },
   buyGpu: (n = 1) => {
     const cur = get().state;
-    if (!cur) return;
-    const r = buyGpu(cur, n);
-    persist(r.state);
-    set({ state: r.state, toast: r.toast ?? r.blocked });
+    if (cur) applyResult(set, buyGpu(cur, n));
   },
   burstCloud: () => {
     const cur = get().state;
-    if (!cur) return;
-    const r = burstCloud(cur);
-    persist(r.state);
-    set({ state: r.state, toast: r.toast ?? r.blocked });
+    if (cur) applyResult(set, burstCloud(cur));
   },
   train: (id) => {
     const cur = get().state;
-    if (!cur) return;
-    const r = startTrain(cur, id);
-    persist(r.state);
-    set({ state: r.state, toast: r.toast ?? r.blocked });
+    if (cur) applyResult(set, startTrain(cur, id));
   },
   demo: (id) => {
     const cur = get().state;
-    if (!cur) return;
-    const r = shipDemo(cur, id);
-    persist(r.state);
-    set({ state: r.state, toast: r.toast ?? r.blocked });
+    if (cur) applyResult(set, shipDemo(cur, id));
+  },
+  launch: (id) => {
+    const cur = get().state;
+    if (cur) applyResult(set, launchProduct(cur, id));
   },
   raise: () => {
     const cur = get().state;
-    if (!cur) return;
-    const r = raiseRound(cur);
-    persist(r.state);
-    set({ state: r.state, toast: r.toast ?? r.blocked });
+    if (cur) applyResult(set, raiseRound(cur));
   },
   pivot: () => {
     const cur = get().state;
-    if (!cur) return;
-    const r = pivot(cur);
-    persist(r.state);
-    set({ state: r.state, toast: r.toast ?? r.blocked });
+    if (cur) applyResult(set, pivot(cur));
   },
   steal: () => {
     const cur = get().state;
-    if (!cur) return;
-    const r = stealPaper(cur);
-    persist(r.state);
-    set({ state: r.state, toast: r.toast ?? r.blocked });
+    if (cur) applyResult(set, stealPaper(cur));
   },
   fake: (id) => {
     const cur = get().state;
-    if (!cur) return;
-    const r = fakeBenchmark(cur, id);
-    persist(r.state);
-    set({ state: r.state, toast: r.toast ?? r.blocked });
+    if (cur) applyResult(set, fakeBenchmark(cur, id));
   },
   farm: () => {
     const cur = get().state;
-    if (!cur) return;
-    const r = farmWaitlist(cur);
-    persist(r.state);
-    set({ state: r.state, toast: r.toast ?? r.blocked });
+    if (cur) applyResult(set, farmWaitlist(cur));
   },
   choose: (id) => {
     const cur = get().state;
-    if (!cur) return;
-    const r = resolveEvent(cur, id);
-    persist(r.state);
-    set({ state: r.state, toast: r.toast });
+    if (cur) applyResult(set, resolveEvent(cur, id));
   },
   setSpeed: (s) => {
     const cur = get().state;
     if (!cur) return;
-    const next = setSpeed(cur, s);
-    set({ state: next });
+    set({ state: setSpeed(cur, s) });
   },
   clearToast: () => set({ toast: null }),
 }));

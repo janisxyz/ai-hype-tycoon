@@ -1,9 +1,12 @@
-export const SAVE_VERSION = 1 as const;
-export const SAVE_KEY = "ai-hype-tycoon-v1";
+export const SAVE_VERSION = 2 as const;
+export const SAVE_KEY = "ai-hype-tycoon-v2";
 
 export type Speed = 0 | 1 | 2 | 4;
 export type Tone = "ok" | "good" | "bad" | "evil";
-export type TabId = "ops" | "lab" | "people" | "shadow";
+export type TabId = "floor" | "lab" | "crew" | "market" | "shadow";
+export type MarketCycle = "winter" | "quiet" | "boom" | "mania";
+export type Stage = "garage" | "loft" | "office" | "warehouse" | "campus" | "tower";
+export type Era = "garage" | "startup" | "scale" | "public" | "empire";
 
 export type RoundId =
   | "friends"
@@ -12,18 +15,10 @@ export type RoundId =
   | "a"
   | "b"
   | "c"
-  | "ipo";
-
-export type Stage = "garage" | "loft" | "office" | "warehouse" | "campus" | "tower";
-
-export type EndingId =
   | "ipo"
-  | "acquired"
-  | "bankrupt"
-  | "indicted"
-  | "useful"
-  | "acquihire"
-  | "nationalized";
+  | "secondary";
+
+export type EndingId = "bankrupt" | "indicted" | "acquired";
 
 export type RoleId =
   | "researcher"
@@ -33,15 +28,17 @@ export type RoleId =
   | "mill"
   | "exec"
   | "demo"
-  | "legal";
+  | "legal"
+  | "product";
 
-export type ModelSpecId = "toy" | "small" | "mid" | "huge" | "agi";
+export type ModelSpecId = "toy" | "small" | "mid" | "huge" | "agi" | "titan" | "sovereign";
 
 export interface Employee {
   id: string;
   roleId: RoleId;
   name: string;
   hiredOn: number;
+  morale: number;
 }
 
 export interface ModelJob {
@@ -56,6 +53,29 @@ export interface FinishedModel {
   quality: number;
   shipped: boolean;
   fakeBench: boolean;
+  launched: boolean;
+}
+
+export interface Product {
+  id: string;
+  name: string;
+  modelId: string;
+  users: number;
+  arpu: number;
+  quality: number;
+}
+
+export interface GpuOrder {
+  qty: number;
+  remaining: number;
+}
+
+export interface Competitor {
+  id: string;
+  name: string;
+  hype: number;
+  valuation: number;
+  stage: string;
 }
 
 export interface NewsItem {
@@ -76,6 +96,8 @@ export interface Effect {
   heat?: number;
   evil?: number;
   waitlist?: number;
+  users?: number;
+  morale?: number;
   valuationMul?: number;
   flag?: string;
   log?: string;
@@ -98,6 +120,7 @@ export interface GameEventDef {
   body: string;
   weight: number;
   minDay?: number;
+  publicOnly?: boolean;
   require?: (s: GameState) => boolean;
   choices: EventChoice[];
 }
@@ -128,6 +151,19 @@ export interface GameState {
   employees: Employee[];
   training: ModelJob | null;
   models: FinishedModel[];
+  products: Product[];
+  users: number;
+  revenueToday: number;
+  listed: boolean;
+  stockPrice: number;
+  shares: number;
+  market: MarketCycle;
+  marketDaysLeft: number;
+  competitors: Competitor[];
+  gpuOrders: GpuOrder[];
+  morale: number;
+  milestones: string[];
+  history: number[];
   demoCooldown: number;
   waitlistCooldown: number;
   stealCooldown: number;
@@ -157,6 +193,7 @@ export interface RoleDef {
   heat: number;
   scandalDecay: number;
   demoBoost: number;
+  product: number;
 }
 
 export interface ModelSpec {
@@ -168,6 +205,8 @@ export interface ModelSpec {
   researchNeed: number;
   qualityCap: number;
   hypeOnShip: number;
+  arpu: number;
+  unlock: (s: GameState) => boolean;
 }
 
 export interface RoundDef {
