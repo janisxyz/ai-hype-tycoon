@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import type { TabId } from "@/game/types";
+import { money } from "@/game/format";
 
 const PLOTS: {
   tab: TabId;
@@ -13,16 +14,16 @@ const PLOTS: {
   side: string;
   roof: string;
 }[] = [
-  { tab: "lab", label: "Lab", x: -1.15, z: 1.05, w: 78, h: 58, d: 64, wall: "#c4785a", side: "#a8664c", roof: "#b85c48" },
-  { tab: "cluster", label: "Cluster", x: 1.2, z: 1.05, w: 92, h: 70, d: 72, wall: "#8b95a3", side: "#6f7884", roof: "#4a5160" },
-  { tab: "floor", label: "HQ", x: 0, z: 0, w: 70, h: 36, d: 70, wall: "#efe6d4", side: "#d9d0bc", roof: "#8fad90" },
-  { tab: "crew", label: "People", x: -1.15, z: -1.1, w: 80, h: 86, d: 68, wall: "#efe6d4", side: "#d4cbb8", roof: "#6d7c86" },
-  { tab: "store", label: "Sell", x: 1.15, z: -1.1, w: 76, h: 54, d: 60, wall: "#d4a574", side: "#b88a5c", roof: "#c45c4a" },
-  { tab: "shadow", label: "Dark", x: 1.85, z: 1.85, w: 54, h: 32, d: 48, wall: "#4a4744", side: "#35322f", roof: "#2a2724" },
+  { tab: "lab", label: "Lab", x: -1.15, z: 1.05, w: 86, h: 64, d: 70, wall: "#d4785a", side: "#b8664c", roof: "#c45c4a" },
+  { tab: "cluster", label: "GPUs", x: 1.2, z: 1.05, w: 98, h: 76, d: 78, wall: "#6a7a88", side: "#55626e", roof: "#3d4a56" },
+  { tab: "floor", label: "HQ", x: 0, z: -0.15, w: 74, h: 96, d: 70, wall: "#f2efe6", side: "#d9d0bc", roof: "#5a9e6a" },
+  { tab: "crew", label: "People", x: -1.15, z: -1.15, w: 84, h: 90, d: 70, wall: "#efe6d4", side: "#d4cbb8", roof: "#6d7c86" },
+  { tab: "store", label: "Shop", x: 1.15, z: -1.15, w: 80, h: 58, d: 64, wall: "#efe6d4", side: "#d4c4a8", roof: "#c45c4a" },
+  { tab: "shadow", label: "Dark", x: -2.05, z: 0.15, w: 54, h: 34, d: 48, wall: "#3a3430", side: "#2a2622", roof: "#1c1a16" },
 ];
 
 function iso(x: number, z: number) {
-  return { left: (x - z) * 74, top: (x + z) * 38 };
+  return { left: (x - z) * 78, top: (x + z) * 40 };
 }
 
 export function IsoFallback({
@@ -30,18 +31,22 @@ export function IsoFallback({
   onSelect,
   preview,
   company,
+  hintTab,
+  earning,
 }: {
   selected: TabId | null;
   onSelect: (tab: TabId) => void;
   preview?: boolean;
   company?: string;
+  hintTab?: TabId;
+  earning?: number;
 }) {
   const walkers = useMemo(
     () =>
-      Array.from({ length: 7 }, (_, i) => ({
+      Array.from({ length: 8 }, (_, i) => ({
         id: i,
-        delay: `${i * 1.1}s`,
-        color: i % 3 === 0 ? "#8fad90" : i % 3 === 1 ? "#c4a574" : "#e7e2d6",
+        delay: `${i * 0.9}s`,
+        color: i % 3 === 0 ? "#4a7c59" : i % 3 === 1 ? "#c4785a" : "#f2efe6",
       })),
     [],
   );
@@ -57,11 +62,12 @@ export function IsoFallback({
         {PLOTS.map((p) => {
           const pos = iso(p.x, p.z);
           const on = selected === p.tab;
+          const hint = hintTab === p.tab && !selected;
           return (
             <button
               key={p.tab}
               type="button"
-              className={`iso-bldg ${on ? "is-on" : ""}`}
+              className={`iso-bldg ${on ? "is-on" : ""} ${hint ? "is-hint" : ""}`}
               style={
                 {
                   "--x": `${pos.left}px`,
@@ -79,7 +85,7 @@ export function IsoFallback({
               <span className="iso-left" />
               <span className="iso-right" />
               <span className="iso-top" />
-              <span className="iso-tag">{p.label}</span>
+              <span className="iso-tag">{hint ? `Tap ${p.label}` : p.tab === "store" && earning && earning > 8 ? money(earning) + "/d" : p.label}</span>
             </button>
           );
         })}

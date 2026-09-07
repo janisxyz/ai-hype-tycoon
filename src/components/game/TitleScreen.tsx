@@ -26,15 +26,15 @@ export function TitleScreen({
       <div className="absolute inset-0">
         <TitleCampus />
       </div>
-      <div className="absolute inset-0 bg-gradient-to-t from-bg via-bg/25 to-transparent pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-t from-bg from-10% via-transparent to-transparent pointer-events-none" />
       <div className="pointer-events-none relative z-10 mx-auto flex min-h-dvh max-w-xl flex-col justify-between px-5 pb-8 pt-8">
         <div>
-          <p className="kicker text-paper/80">Idle campus · 3D</p>
+          <p className="kicker text-paper/80">3D idle campus</p>
           <h1 className="mt-2 font-display text-4xl leading-[0.95] italic sm:text-5xl">AI Hype Tycoon</h1>
         </div>
         <div>
-        <p className="max-w-md text-sm text-paper/80">
-          Tap the glowing Lab. Train an 8B. Open Chat. Money starts the same night.
+        <p className="max-w-md text-sm text-paper/90">
+          Tap the bouncing Lab. Open Chat. Money starts on the first night — you cannot go broke learning the map.
         </p>
         <label className="pointer-events-auto mt-5 block text-xs font-medium tracking-wide text-muted uppercase">
           Company
@@ -51,7 +51,7 @@ export function TitleScreen({
             onClick={() => onStart(name)}
             className="min-h-12 rounded-lg bg-paper px-5 text-sm font-semibold text-ink transition-transform duration-150 active:scale-[0.98]"
           >
-            Open the garage
+            Play
           </button>
           {saved && (
             <button

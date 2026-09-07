@@ -102,15 +102,15 @@ export function LabPanel({ state }: { state: GameState }) {
 
       {latest && !hasChat && !state.training && (
         <div className="rounded-xl border border-accent/40 bg-accent/10 p-4">
-          <p className="kicker text-accent">Ready to sell</p>
-          <p className="mt-1 font-display text-3xl italic leading-tight">{latest.name}</p>
-          <p className="mt-2 text-sm text-muted">Open Chat. Hundreds of users walk in. You start making money tonight.</p>
+          <p className="kicker text-accent">One tap</p>
+          <p className="mt-1 font-display text-3xl italic leading-tight">Open Chat</p>
+          <p className="mt-2 text-sm text-muted">Your 8B is already trained. Open it. Users walk in. You start making money now.</p>
           <button
             type="button"
             onClick={() => openChat(latest.id)}
             className="mt-4 min-h-12 w-full rounded-lg bg-paper text-base font-semibold text-ink"
           >
-            Open Chat and charge
+            Open Chat — start earning
           </button>
         </div>
       )}
@@ -300,12 +300,12 @@ export function StorePanel({ state }: { state: GameState }) {
       <div className="space-y-3">
         <div className="rounded-xl border border-border bg-elevated p-4">
           <p className="kicker">How you make money</p>
-          <p className="mt-2 font-display text-2xl italic leading-tight">Train. Open Chat. Cash comes in.</p>
+          <p className="mt-2 font-display text-2xl italic leading-tight">Tap Lab. Open Chat. Cash comes in.</p>
           <ol className="mt-4 space-y-3">
             {[
-              { n: "01", t: "Train", d: "Tap the glowing Lab. One button. Two days." },
-              { n: "02", t: "Open Chat", d: "Thousands of users walk in. You bill them tonight." },
-              { n: "03", t: "Advertise", d: "Cheap ads in Shop buy the next wave." },
+              { n: "01", t: "Open Chat", d: "Tap the bouncing Lab. One button. Money starts now." },
+              { n: "02", t: "Advertise", d: "Cheap ads in Shop buy the next wave of users." },
+              { n: "03", t: "Train bigger", d: "13B, 32B, 70B — each one bills more." },
             ].map((step) => (
               <li key={step.n} className="flex gap-3">
                 <span className="font-mono text-xs text-accent">{step.n}</span>

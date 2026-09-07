@@ -11,7 +11,7 @@ import type {
   Stage,
 } from "./types";
 
-export const DAY_MS = 4200;
+export const DAY_MS = 3000;
 
 /** Inverse of chat demand: MAU per live session. Peak concurrency ≈ 2% of DAU, DAU ≈ MAU/3.1. */
 export const CHAT_USERS_PER_LIVE = 3.1 * 52;

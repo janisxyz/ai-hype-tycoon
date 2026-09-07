@@ -28,7 +28,7 @@ export function ActionSheet({
     <Drawer.Root open={open} onOpenChange={(v) => !v && onClose()}>
       <Drawer.Portal>
         <Drawer.Overlay className="fixed inset-0 z-40 bg-ink/25" />
-        <Drawer.Content className="fixed inset-x-0 bottom-0 z-50 mx-auto flex max-h-[78dvh] w-full max-w-2xl flex-col rounded-t-xl border border-border bg-surface shadow-sheet outline-none">
+        <Drawer.Content className="fixed inset-x-0 bottom-0 z-50 mx-auto flex max-h-[68dvh] w-full max-w-2xl flex-col rounded-t-xl border border-border bg-surface shadow-sheet outline-none">
           <div className="mx-auto mt-2 h-1 w-10 rounded-full bg-border-strong" />
           <header className="flex items-start justify-between gap-3 px-4 pb-2 pt-3">
             <div>

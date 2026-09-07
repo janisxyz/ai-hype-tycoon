@@ -2,25 +2,30 @@ import { ContactShadows, Html, OrbitControls, RoundedBox } from "@react-three/dr
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Component, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import * as THREE from "three";
-import { derive, createGame } from "@/game/engine";
+import { createGame, derive } from "@/game/engine";
 import { stageCopy } from "@/game/content";
+import { money } from "@/game/format";
 import { IsoFallback } from "./IsoFallback";
 import type { Employee, GameState, Stage, TabId } from "@/game/types";
 
-const INK = "#141210";
-const PAPER = "#e7e2d6";
-const SAGE = "#8fad90";
-const COPPER = "#c4a574";
+const SKY = "#6eb5d6";
+const GRASS = "#4f9e3e";
+const GRASS_DK = "#3d8230";
+const DIRT = "#c4a574";
+const ROAD_COL = "#6a6864";
+const PLAZA = "#d9cbb0";
+const PAPER = "#f2efe6";
+const INK = "#1c1a16";
+const SAGE = "#5a9e6a";
+const TERRACOTTA = "#d4785a";
+const BRICK = "#c45c4a";
+const CREAM = "#efe6d4";
+const STEEL = "#6a7a88";
+const STEEL_DK = "#3d4a56";
+const WOOD = "#8a6a4a";
 const CRIMSON = "#c45c4a";
-const WOOD = "#6b5344";
-const PLASTER = "#d9d2c4";
-const STEEL = "#4a4a46";
-const GLASS = "#9aada0";
-const ASPHALT = "#2a2722";
-const GRASS = "#243028";
-const SKY = "#12110f";
-const BRICK = "#b56a4c";
-const BRICK_DK = "#8a4a36";
+const WATER = "#4aa3c4";
+const GLASS = "#b7d4c8";
 
 const STAGE_RANK: Record<Stage, number> = {
   garage: 0,
@@ -36,28 +41,26 @@ type Lot = {
   label: string;
   pos: [number, number, number];
   size: [number, number, number];
-  wall: string;
-  roof: string;
 };
 
 const LOTS: Lot[] = [
-  { tab: "lab", label: "Lab", pos: [-6.6, 0, 4.2], size: [5.6, 2.5, 4.8], wall: BRICK, roof: BRICK_DK },
-  { tab: "cluster", label: "GPUs", pos: [6.8, 0, 3.6], size: [6.2, 3.1, 5.6], wall: "#3a3a38", roof: "#2a2a28" },
-  { tab: "store", label: "Shop", pos: [0.1, 0, 8.6], size: [4.8, 2.3, 3.9], wall: "#8a5a3a", roof: "#6a3e28" },
-  { tab: "crew", label: "People", pos: [-6.8, 0, -5.6], size: [5.4, 3.5, 4.6], wall: PLASTER, roof: "#6d7c86" },
-  { tab: "floor", label: "HQ", pos: [6.2, 0, -6.0], size: [5.8, 4.2, 5.0], wall: PLASTER, roof: SAGE },
-  { tab: "shadow", label: "Dark", pos: [-12.4, 0, -0.6], size: [3.6, 1.6, 3.6], wall: "#2a221e", roof: "#1a1614" },
+  { tab: "lab", label: "Lab", pos: [-5.4, 0, 4.6], size: [5.4, 2.8, 4.8] },
+  { tab: "cluster", label: "GPUs", pos: [5.6, 0, 4.2], size: [6.2, 3.2, 5.4] },
+  { tab: "store", label: "Shop", pos: [0.1, 0, 9.0], size: [4.8, 2.4, 3.8] },
+  { tab: "crew", label: "People", pos: [-5.6, 0, -4.8], size: [5.2, 3.8, 4.6] },
+  { tab: "floor", label: "HQ", pos: [5.2, 0, -5.0], size: [5.6, 4.6, 5.0] },
+  { tab: "shadow", label: "Dark", pos: [-11.2, 0, 0.2], size: [3.4, 1.8, 3.4] },
 ];
 
 const ROAD = new THREE.CatmullRomCurve3(
   [
-    new THREE.Vector3(-14, 0.12, 10),
-    new THREE.Vector3(4, 0.12, 13),
-    new THREE.Vector3(16, 0.12, 6),
-    new THREE.Vector3(15, 0.12, -10),
-    new THREE.Vector3(-2, 0.12, -14),
-    new THREE.Vector3(-16, 0.12, -4),
-    new THREE.Vector3(-15, 0.12, 6),
+    new THREE.Vector3(-13, 0.14, 9),
+    new THREE.Vector3(3, 0.14, 13),
+    new THREE.Vector3(14, 0.14, 6),
+    new THREE.Vector3(13, 0.14, -9),
+    new THREE.Vector3(-2, 0.14, -13),
+    new THREE.Vector3(-14, 0.14, -4),
+    new THREE.Vector3(-13.5, 0.14, 5),
   ],
   true,
 );
@@ -80,18 +83,18 @@ class MapError extends Component<{ children: ReactNode; fallback: ReactNode }, {
 }
 
 export function CampusMap({ state, selected, onSelect, preview = false }: MapProps) {
-  const [mode, setMode] = useState<"boot" | "gl" | "iso">("boot");
+  const [mode, setMode] = useState<"gl" | "iso">("gl");
   useEffect(() => {
     try {
       const c = document.createElement("canvas");
-      const gl = c.getContext("webgl2") || c.getContext("webgl");
-      setMode(gl ? "gl" : "iso");
+      const gl =
+        c.getContext("webgl2", { failIfMajorPerformanceCaveat: false }) ||
+        c.getContext("webgl", { failIfMajorPerformanceCaveat: false });
+      if (!gl) setMode("iso");
     } catch {
       setMode("iso");
     }
   }, []);
-
-  if (mode === "boot") return <div className="absolute inset-0 bg-bg" />;
   if (mode === "iso") {
     return (
       <IsoFallback
@@ -99,6 +102,8 @@ export function CampusMap({ state, selected, onSelect, preview = false }: MapPro
         onSelect={onSelect}
         preview={preview}
         company={state.company}
+        hintTab={derive(state).hintTab}
+        earning={derive(state).revenue}
       />
     );
   }
@@ -107,15 +112,22 @@ export function CampusMap({ state, selected, onSelect, preview = false }: MapPro
     <div className="absolute inset-0">
       <MapError
         fallback={
-          <IsoFallback selected={selected} onSelect={onSelect} preview={preview} company={state.company} />
+          <IsoFallback
+            selected={selected}
+            onSelect={onSelect}
+            preview={preview}
+            company={state.company}
+            hintTab={derive(state).hintTab}
+            earning={derive(state).revenue}
+          />
         }
       >
         <Canvas
           className="map-canvas h-full w-full"
           shadows
-          dpr={[1, 1.5]}
-          gl={{ antialias: true, alpha: false, powerPreference: "high-performance" }}
-          camera={{ position: preview ? [18, 13, 20] : [22, 16, 22], fov: 36, near: 0.2, far: 110 }}
+          dpr={[1, 1.35]}
+          gl={{ antialias: false, alpha: false, powerPreference: "high-performance", failIfMajorPerformanceCaveat: false }}
+          camera={{ position: preview ? [13, 12, 14] : [12, 13, 12], fov: 42, near: 0.2, far: 120 }}
           onCreated={({ gl, scene }) => {
             gl.setClearColor(SKY, 1);
             gl.shadowMap.type = THREE.PCFShadowMap;
@@ -123,37 +135,37 @@ export function CampusMap({ state, selected, onSelect, preview = false }: MapPro
           }}
           style={{ background: SKY, touchAction: "none" }}
         >
-          <fog attach="fog" args={[SKY, 28, 64]} />
-          <hemisphereLight args={[PAPER, ASPHALT, 0.62]} />
-          <ambientLight intensity={0.32} />
+          <fog attach="fog" args={[SKY, 58, 110]} />
+          <hemisphereLight args={["#fff6dc", GRASS_DK, 0.62]} />
+          <ambientLight intensity={0.38} />
           <directionalLight
             castShadow
-            position={[14, 22, 10]}
-            intensity={1.45}
-            color="#fff1d6"
+            position={[16, 24, 10]}
+            intensity={1.55}
+            color="#fff6e0"
             shadow-mapSize-width={1024}
             shadow-mapSize-height={1024}
             shadow-camera-near={2}
-            shadow-camera-far={56}
-            shadow-camera-left={-18}
-            shadow-camera-right={18}
-            shadow-camera-top={18}
-            shadow-camera-bottom={-18}
+            shadow-camera-far={60}
+            shadow-camera-left={-20}
+            shadow-camera-right={20}
+            shadow-camera-top={20}
+            shadow-camera-bottom={-20}
           />
           <World state={state} selected={selected} onSelect={onSelect} preview={preview} />
-          <ContactShadows opacity={0.38} scale={52} blur={2.2} far={12} color={INK} />
+          <ContactShadows opacity={0.28} scale={56} blur={2.4} far={14} color="#2a3a22" />
           <OrbitControls
             makeDefault
             enablePan={false}
             enableDamping
-            dampingFactor={0.085}
-            minPolarAngle={0.62}
-            maxPolarAngle={1.18}
-            minDistance={preview ? 18 : 12}
-            maxDistance={44}
-            autoRotate={preview || !selected}
-            autoRotateSpeed={preview ? 0.42 : 0.28}
-            target={[0, 1.6, 0]}
+            dampingFactor={0.08}
+            minPolarAngle={0.72}
+            maxPolarAngle={1.08}
+            minDistance={preview ? 14 : 10}
+            maxDistance={32}
+            autoRotate={preview}
+            autoRotateSpeed={0.38}
+            target={[0, 0.8, 0]}
           />
         </Canvas>
       </MapError>
@@ -165,12 +177,14 @@ function World({ state, selected, onSelect, preview }: MapProps) {
   const d = derive(state);
   const rank = STAGE_RANK[d.stage];
   const cards = Math.max(1, state.gpus.h100 + state.gpus.b200 + state.gpus.gb200);
-  const walkers = Math.min(preview ? 10 : 14, Math.max(4, state.employees.length + 3));
+  const walkers = Math.min(preview ? 9 : 12, Math.max(5, state.employees.length + 4));
   const hint = selected ?? d.hintTab;
 
   return (
     <group>
       <Ground rank={rank} />
+      <Fountain />
+      <Clouds />
       <FocusRig selected={selected} />
       {LOTS.map((lot) => (
         <LotBuilding
@@ -183,6 +197,7 @@ function World({ state, selected, onSelect, preview }: MapProps) {
           hinted={hint === lot.tab && !selected}
           onSelect={onSelect}
           preview={Boolean(preview)}
+          revenue={d.revenue}
         />
       ))}
       {rank >= 4 && <Pavilion />}
@@ -191,13 +206,13 @@ function World({ state, selected, onSelect, preview }: MapProps) {
         <CampusWalker
           key={i}
           offset={i / walkers}
-          speed={0.014 + (i % 4) * 0.003}
-          color={i % 3 === 0 ? SAGE : i % 3 === 1 ? COPPER : PAPER}
+          speed={0.016 + (i % 4) * 0.003}
+          color={i % 3 === 0 ? "#4a7c59" : i % 3 === 1 ? "#c4785a" : PAPER}
         />
       ))}
-      <Car offset={0} color="#c45c4a" />
-      <Car offset={0.42} color="#3d4a44" />
-      {rank >= 2 && <Car offset={0.71} color={STEEL} />}
+      <Car offset={0} color={CRIMSON} />
+      <Car offset={0.38} color="#3d5a4a" />
+      {rank >= 2 && <Car offset={0.7} color={STEEL_DK} />}
       <Trees />
       {d.revenue > 4 && <CoinFountain origin={LOTS[2]!.pos} />}
     </group>
@@ -207,18 +222,18 @@ function World({ state, selected, onSelect, preview }: MapProps) {
 function FocusRig({ selected }: { selected: TabId | null }) {
   const camera = useThree((s) => s.camera);
   const controls = useThree((s) => s.controls) as { target: THREE.Vector3; update: () => void } | null;
-  const goal = useMemo(() => new THREE.Vector3(0, 1.6, 0), []);
-  const camGoal = useMemo(() => new THREE.Vector3(22, 16, 22), []);
+  const goal = useMemo(() => new THREE.Vector3(0, 0.8, 0), []);
+  const camGoal = useMemo(() => new THREE.Vector3(12, 13, 12), []);
   useFrame((_, raw) => {
     if (!controls) return;
     const dt = Math.min(raw, 0.1);
     const lot = LOTS.find((f) => f.tab === selected);
     if (lot) {
-      goal.set(lot.pos[0], lot.size[1] * 0.45, lot.pos[2]);
-      camGoal.set(lot.pos[0] + 9.5, lot.size[1] + 7.2, lot.pos[2] + 9.5);
+      goal.set(lot.pos[0], lot.size[1] * 0.4, lot.pos[2]);
+      camGoal.set(lot.pos[0] + 7.6, lot.size[1] + 6.8, lot.pos[2] + 7.6);
     } else {
-      goal.set(0, 1.6, 0);
-      camGoal.set(22, 16, 22);
+      goal.set(0, 0.8, 0);
+      camGoal.set(12, 13, 12);
     }
     controls.target.lerp(goal, 1 - Math.exp(-3.2 * dt));
     if (lot) camera.position.lerp(camGoal, 1 - Math.exp(-1.6 * dt));
@@ -228,36 +243,122 @@ function FocusRig({ selected }: { selected: TabId | null }) {
 }
 
 function Ground({ rank }: { rank: number }) {
+  const patches: [number, number, number][] = [
+    [-8, 0.015, 8],
+    [9, 0.015, -7],
+    [-10, 0.015, -8],
+    [8, 0.015, 9],
+    [0, 0.015, -11],
+  ];
   return (
     <group>
       <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-        <planeGeometry args={[70, 70]} />
-        <meshStandardMaterial color="#161410" roughness={1} />
+        <planeGeometry args={[90, 90]} />
+        <meshStandardMaterial color="#6eb5d6" roughness={1} />
       </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]} receiveShadow>
-        <circleGeometry args={[18, 48]} />
-        <meshStandardMaterial color={rank >= 4 ? GRASS : "#1c1a16"} roughness={0.95} />
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.005, 0]} receiveShadow>
+        <circleGeometry args={[22, 48]} />
+        <meshStandardMaterial color={GRASS} roughness={0.92} />
       </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[9.4, 0.03, 6.2]} receiveShadow>
-        <planeGeometry args={[10, 8]} />
-        <meshStandardMaterial color={ASPHALT} roughness={0.9} />
+      {patches.map(([x, y, z], i) => (
+        <mesh key={i} rotation={[-Math.PI / 2, 0, 0]} position={[x, y, z]} receiveShadow>
+          <circleGeometry args={[3.2 + (i % 3) * 0.6, 16]} />
+          <meshStandardMaterial color={i % 2 ? GRASS_DK : "#78c262"} roughness={0.95} />
+        </mesh>
+      ))}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 0]} receiveShadow>
+        <circleGeometry args={[3.4, 32]} />
+        <meshStandardMaterial color={PLAZA} roughness={0.85} />
       </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.025, 0]} receiveShadow>
-        <ringGeometry args={[11.6, 13.4, 48]} />
-        <meshStandardMaterial color="#23201c" roughness={0.92} />
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.028, 0]} receiveShadow>
+        <ringGeometry args={[11.2, 13.2, 48]} />
+        <meshStandardMaterial color={ROAD_COL} roughness={0.9} />
       </mesh>
       {LOTS.map((lot) => (
         <mesh key={lot.tab} rotation={[-Math.PI / 2, 0, 0]} position={[lot.pos[0], 0.04, lot.pos[2]]} receiveShadow>
-          <planeGeometry args={[lot.size[0] + 1.6, lot.size[2] + 1.6]} />
-          <meshStandardMaterial color="#1f1c18" roughness={0.9} />
+          <planeGeometry args={[lot.size[0] + 1.8, lot.size[2] + 1.8]} />
+          <meshStandardMaterial color={DIRT} roughness={0.9} />
         </mesh>
       ))}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[9.6, 0.045, 6.4]} receiveShadow>
+        <planeGeometry args={[8, 6]} />
+        <meshStandardMaterial color={ROAD_COL} roughness={0.88} />
+      </mesh>
       {rank >= 3 && (
-        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-10, 0.04, 8]} receiveShadow>
-          <planeGeometry args={[7, 5]} />
-          <meshStandardMaterial color="#3a342c" roughness={0.88} />
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-9.5, 0.04, 8.5]} receiveShadow>
+          <planeGeometry args={[6, 4.4]} />
+          <meshStandardMaterial color="#7a9e55" roughness={0.9} />
         </mesh>
       )}
+      <HedgeStrip />
+    </group>
+  );
+}
+
+function HedgeStrip() {
+  const spots: [number, number][] = [
+    [-2.2, 2.4],
+    [2.2, 2.4],
+    [2.4, -2.2],
+    [-2.4, -2.2],
+  ];
+  return (
+    <group>
+      {spots.map(([x, z], i) => (
+        <RoundedBox key={i} args={[1.6, 0.55, 0.45]} position={[x, 0.32, z]} radius={0.08} castShadow>
+          <meshStandardMaterial color={GRASS_DK} />
+        </RoundedBox>
+      ))}
+    </group>
+  );
+}
+
+function Fountain() {
+  const water = useRef<THREE.Mesh>(null);
+  useFrame((s) => {
+    if (water.current) water.current.rotation.y = s.clock.elapsedTime * 0.45;
+  });
+  return (
+    <group>
+      <mesh position={[0, 0.18, 0]} castShadow>
+        <cylinderGeometry args={[1.55, 1.75, 0.28, 16]} />
+        <meshStandardMaterial color={PLAZA} roughness={0.7} />
+      </mesh>
+      <mesh ref={water} position={[0, 0.34, 0]}>
+        <cylinderGeometry args={[1.2, 1.2, 0.08, 16]} />
+        <meshStandardMaterial color={WATER} roughness={0.2} metalness={0.15} transparent opacity={0.88} />
+      </mesh>
+      <mesh position={[0, 0.72, 0]} castShadow>
+        <cylinderGeometry args={[0.12, 0.16, 0.72, 8]} />
+        <meshStandardMaterial color={CREAM} />
+      </mesh>
+      <mesh position={[0, 1.12, 0]}>
+        <sphereGeometry args={[0.16, 10, 10]} />
+        <meshStandardMaterial color={WATER} emissive={WATER} emissiveIntensity={0.25} />
+      </mesh>
+    </group>
+  );
+}
+
+function Clouds() {
+  const group = useRef<THREE.Group>(null);
+  useFrame((_, raw) => {
+    if (group.current) group.current.rotation.y += Math.min(raw, 0.1) * 0.012;
+  });
+  const spots: [number, number, number, number][] = [
+    [-14, 16, -6, 2.4],
+    [12, 17, -10, 2.8],
+    [-6, 15.5, 16, 2.2],
+    [16, 14.5, 8, 1.8],
+  ];
+  return (
+    <group ref={group}>
+      {spots.map(([x, y, z, s], i) => (
+        <mesh key={i} position={[x, y, z]}>
+          <sphereGeometry args={[s, 10, 10]} />
+          <meshStandardMaterial color="#f7fbff" roughness={1} />
+        </mesh>
+      ))}
     </group>
   );
 }
@@ -271,6 +372,7 @@ function LotBuilding({
   hinted,
   onSelect,
   preview,
+  revenue,
 }: {
   lot: Lot;
   state: GameState;
@@ -280,44 +382,35 @@ function LotBuilding({
   hinted: boolean;
   onSelect: (tab: TabId) => void;
   preview: boolean;
+  revenue: number;
 }) {
+  const wrap = useRef<THREE.Group>(null);
   const [w, h, d] = lot.size;
-  const mat = useRef<THREE.MeshStandardMaterial>(null);
   useFrame((st) => {
-    if (!mat.current) return;
-    mat.current.emissiveIntensity = hinted ? 0.28 + Math.sin(st.clock.elapsedTime * 3.4) * 0.16 : selected ? 0.12 : 0;
+    if (!wrap.current) return;
+    const bounce = hinted ? 1 + Math.sin(st.clock.elapsedTime * 4.4) * 0.055 : selected ? 1.015 : 1;
+    wrap.current.scale.set(1, bounce, 1);
   });
 
   return (
     <group position={lot.pos}>
-      <RoundedBox args={[w, h, d]} position={[0, h / 2, 0]} radius={0.08} smoothness={2} castShadow receiveShadow>
-        <meshStandardMaterial
-          ref={mat}
-          color={lot.wall}
-          roughness={0.72}
-          metalness={lot.tab === "cluster" ? 0.28 : 0.04}
-          emissive={SAGE}
-          emissiveIntensity={0}
-        />
-      </RoundedBox>
-      <RoundedBox args={[w + 0.35, 0.22, d + 0.35]} position={[0, h + 0.08, 0]} radius={0.04} castShadow>
-        <meshStandardMaterial color={lot.roof} roughness={0.55} />
-      </RoundedBox>
-      <WindowStrip tab={lot.tab} width={w} height={h} depth={d} />
-      {lot.tab === "lab" && <LabRoof w={w} h={h} d={d} training={!!state.training} />}
-      {lot.tab === "cluster" && <GpuRoof w={w} h={h} />}
-      {lot.tab === "store" && <Awning w={w} h={h} d={d} live={state.products.length > 0} />}
-      {lot.tab === "floor" && state.listed && <Flag position={[w * 0.38, h, d * 0.38]} />}
-      <group position={[0, 0.12, 0]} scale={Math.min(w, d) / 6.2}>
-        <Interior tab={lot.tab} state={state} rank={rank} cards={cards} />
+      <group ref={wrap}>
+        <BuildingMesh lot={lot} state={state} />
+        <group position={[0, 0.12, 0]} scale={Math.min(w, d) / 6.2}>
+          <Interior tab={lot.tab} state={state} rank={rank} cards={cards} />
+        </group>
+        {!preview && <FloorPeople count={peopleOn(lot.tab, state)} y={0.42} seed={w + h} />}
       </group>
-      {!preview && (
-        <FloorPeople count={peopleOn(lot.tab, state)} y={0.42} seed={w + h} />
-      )}
-      <SelectRing on={selected} radius={Math.max(w, d) * 0.58} />
-      <GlowPad on={hinted} radius={Math.max(w, d) * 0.7} />
-      <Beacon on={hinted} height={h} />
-      <BuildingLabel label={lot.label} height={h} active={selected || hinted} hint={hinted} />
+      <SelectRing on={selected} radius={Math.max(w, d) * 0.62} />
+      <GlowPad on={hinted} radius={Math.max(w, d) * 0.74} />
+      <TapArrow on={hinted} height={h} />
+      <BuildingLabel
+        label={lot.label}
+        height={h}
+        active={selected || hinted}
+        hint={hinted}
+        extra={lot.tab === "store" && revenue > 8 ? `${money(revenue)}/d` : null}
+      />
       <mesh
         position={[0, h * 0.5, 0]}
         onClick={(e) => {
@@ -331,37 +424,60 @@ function LotBuilding({
           document.body.style.cursor = "auto";
         }}
       >
-        <boxGeometry args={[w + 0.4, h + 0.4, d + 0.4]} />
+        <boxGeometry args={[w + 1.1, h + 1.2, d + 1.1]} />
         <meshBasicMaterial transparent opacity={0} />
       </mesh>
     </group>
   );
 }
 
-function WindowStrip({ tab, width, height, depth }: { tab: TabId; width: number; height: number; depth: number }) {
-  const cols = tab === "shadow" ? 2 : 4;
-  const rows = tab === "shadow" ? 1 : Math.max(1, Math.round(height / 1.35));
-  const lit = tab !== "shadow";
+function BuildingMesh({ lot, state }: { lot: Lot; state: GameState }) {
+  const [w, h, d] = lot.size;
+  if (lot.tab === "lab") return <LabMesh w={w} h={h} d={d} training={!!state.training} />;
+  if (lot.tab === "cluster") return <GpuMesh w={w} h={h} d={d} />;
+  if (lot.tab === "store") return <ShopMesh w={w} h={h} d={d} live={state.products.length > 0} />;
+  if (lot.tab === "crew") return <CrewMesh w={w} h={h} d={d} />;
+  if (lot.tab === "floor") return <HqMesh w={w} h={h} d={d} listed={state.listed} />;
+  return <DarkMesh w={w} h={h} d={d} hot={state.evil > 6} />;
+}
+
+function Windows({
+  w,
+  h,
+  d,
+  cols,
+  rows,
+  color,
+  emissive,
+}: {
+  w: number;
+  h: number;
+  d: number;
+  cols: number;
+  rows: number;
+  color: string;
+  emissive: string;
+}) {
   const panes: { p: [number, number, number]; rot: [number, number, number] }[] = [];
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
-      const u = -width / 2 + 0.7 + c * ((width - 1.4) / Math.max(1, cols - 1));
-      const v = 0.7 + r * ((height - 1.1) / Math.max(1, rows));
-      panes.push({ p: [u, v, depth / 2 + 0.03], rot: [0, 0, 0] });
-      if (c % 2 === 0) panes.push({ p: [width / 2 + 0.03, v, u * (depth / width)], rot: [0, Math.PI / 2, 0] });
+      const u = -w / 2 + 0.7 + c * ((w - 1.4) / Math.max(1, cols - 1));
+      const v = 0.65 + r * ((h - 1.05) / Math.max(1, rows));
+      panes.push({ p: [u, v, d / 2 + 0.04], rot: [0, 0, 0] });
+      if (c % 2 === 0) panes.push({ p: [w / 2 + 0.04, v, u * (d / w) * 0.35], rot: [0, Math.PI / 2, 0] });
     }
   }
   return (
     <group>
       {panes.map((pane, i) => (
         <mesh key={i} position={pane.p} rotation={pane.rot}>
-          <boxGeometry args={[0.42, 0.46, 0.05]} />
+          <boxGeometry args={[0.46, 0.5, 0.06]} />
           <meshStandardMaterial
-            color={GLASS}
-            emissive={tab === "shadow" ? CRIMSON : SAGE}
-            emissiveIntensity={lit ? 0.22 + (i % 4) * 0.08 : 0.08}
+            color={color}
+            emissive={emissive}
+            emissiveIntensity={0.35 + (i % 3) * 0.08}
             roughness={0.22}
-            metalness={0.35}
+            metalness={0.2}
           />
         </mesh>
       ))}
@@ -369,56 +485,143 @@ function WindowStrip({ tab, width, height, depth }: { tab: TabId; width: number;
   );
 }
 
-function LabRoof({ w, h, d, training }: { w: number; h: number; d: number; training: boolean }) {
+function LabMesh({ w, h, d, training }: { w: number; h: number; d: number; training: boolean }) {
   return (
     <group>
-      <mesh position={[-w * 0.18, h + 0.55, 0]} rotation={[0, 0, 0.45]} castShadow>
-        <boxGeometry args={[w * 0.48, 0.12, d * 0.92]} />
-        <meshStandardMaterial color={BRICK_DK} />
+      <RoundedBox args={[w, h, d]} position={[0, h / 2, 0]} radius={0.08} castShadow receiveShadow>
+        <meshStandardMaterial color={TERRACOTTA} roughness={0.72} />
+      </RoundedBox>
+      <mesh position={[-w * 0.2, h + 0.55, 0]} rotation={[0, 0, 0.48]} castShadow>
+        <boxGeometry args={[w * 0.55, 0.14, d * 0.96]} />
+        <meshStandardMaterial color={BRICK} />
       </mesh>
-      <mesh position={[w * 0.18, h + 0.55, 0]} rotation={[0, 0, -0.45]} castShadow>
-        <boxGeometry args={[w * 0.48, 0.12, d * 0.92]} />
-        <meshStandardMaterial color={BRICK_DK} />
+      <mesh position={[w * 0.2, h + 0.55, 0]} rotation={[0, 0, -0.48]} castShadow>
+        <boxGeometry args={[w * 0.55, 0.14, d * 0.96]} />
+        <meshStandardMaterial color={BRICK} />
       </mesh>
-      <mesh position={[w * 0.32, h + 1.05, -d * 0.2]} castShadow>
-        <cylinderGeometry args={[0.18, 0.22, 1.1, 8]} />
+      <mesh position={[w * 0.28, h + 1.15, -d * 0.18]} castShadow>
+        <cylinderGeometry args={[0.2, 0.24, 1.2, 8]} />
         <meshStandardMaterial color={STEEL} />
       </mesh>
-      {training && <pointLight position={[0, h + 1.2, 0]} color={SAGE} intensity={1.4} distance={8} />}
+      <RoundedBox args={[1.8, 1.4, 1.6]} position={[w * 0.42, 0.8, d * 0.42]} radius={0.06} castShadow>
+        <meshStandardMaterial color={GLASS} transparent opacity={0.72} emissive={SAGE} emissiveIntensity={training ? 0.45 : 0.12} />
+      </RoundedBox>
+      <Windows w={w} h={h} d={d} cols={4} rows={2} color={GLASS} emissive={training ? SAGE : PAPER} />
+      {training && <pointLight position={[0, h + 1.3, 0]} color={SAGE} intensity={1.5} distance={9} />}
     </group>
   );
 }
 
-function GpuRoof({ w, h }: { w: number; h: number }) {
+function GpuMesh({ w, h, d }: { w: number; h: number; d: number }) {
   return (
     <group>
-      {[-1.4, 0, 1.4].map((x) => (
-        <RoundedBox key={x} args={[1.1, 0.35, 0.8]} position={[x, h + 0.32, 0.4]} radius={0.04} castShadow>
-          <meshStandardMaterial color={STEEL} metalness={0.4} />
+      <RoundedBox args={[w, h, d]} position={[0, h / 2, 0]} radius={0.06} castShadow receiveShadow>
+        <meshStandardMaterial color={STEEL} roughness={0.45} metalness={0.28} />
+      </RoundedBox>
+      <RoundedBox args={[w + 0.4, 0.28, d + 0.4]} position={[0, h + 0.1, 0]} radius={0.04} castShadow>
+        <meshStandardMaterial color={STEEL_DK} metalness={0.3} />
+      </RoundedBox>
+      {[-1.6, 0, 1.6].map((x) => (
+        <RoundedBox key={x} args={[1.15, 0.4, 0.85]} position={[x, h + 0.42, 0.35]} radius={0.05} castShadow>
+          <meshStandardMaterial color={STEEL_DK} metalness={0.4} />
         </RoundedBox>
       ))}
-      <pointLight position={[0, h + 0.8, 0]} color={SAGE} intensity={0.6} distance={6} />
+      <mesh position={[0, h * 0.55, d / 2 + 0.08]}>
+        <boxGeometry args={[w * 0.82, 0.22, 0.1]} />
+        <meshStandardMaterial color="#3ad0c0" emissive="#3ad0c0" emissiveIntensity={0.7} toneMapped={false} />
+      </mesh>
+      <Windows w={w} h={h} d={d} cols={5} rows={2} color="#1a2428" emissive="#3ad0c0" />
+      <pointLight position={[0, h + 0.9, 0]} color="#7fe0d4" intensity={0.7} distance={7} />
     </group>
   );
 }
 
-function Awning({ w, h, d, live }: { w: number; h: number; d: number; live: boolean }) {
+function ShopMesh({ w, h, d, live }: { w: number; h: number; d: number; live: boolean }) {
   return (
     <group>
-      <mesh position={[0, h * 0.62, d / 2 + 0.35]} castShadow>
-        <boxGeometry args={[w * 0.92, 0.08, 0.7]} />
-        <meshStandardMaterial color={live ? SAGE : COPPER} />
+      <RoundedBox args={[w, h, d]} position={[0, h / 2, 0]} radius={0.08} castShadow receiveShadow>
+        <meshStandardMaterial color={CREAM} roughness={0.7} />
+      </RoundedBox>
+      <RoundedBox args={[w + 0.3, 0.2, d + 0.3]} position={[0, h + 0.08, 0]} radius={0.04} castShadow>
+        <meshStandardMaterial color={BRICK} />
+      </RoundedBox>
+      <mesh position={[0, h * 0.62, d / 2 + 0.4]} castShadow>
+        <boxGeometry args={[w * 0.94, 0.1, 0.8]} />
+        <meshStandardMaterial color={live ? SAGE : CRIMSON} />
       </mesh>
-      {live && <pointLight position={[0, h * 0.7, d / 2 + 0.5]} color={SAGE} intensity={0.8} distance={5} />}
+      <mesh position={[0, h * 0.82, d / 2 + 0.06]}>
+        <boxGeometry args={[w * 0.7, 0.55, 0.08]} />
+        <meshStandardMaterial color={INK} emissive={live ? SAGE : PAPER} emissiveIntensity={live ? 0.55 : 0.12} />
+      </mesh>
+      {[-1.1, 1.1].map((x) => (
+        <RoundedBox key={x} args={[0.7, 0.35, 0.7]} position={[x, 0.22, d / 2 + 0.7]} radius={0.04} castShadow>
+          <meshStandardMaterial color={WOOD} />
+        </RoundedBox>
+      ))}
+      <Windows w={w} h={h} d={d} cols={3} rows={1} color={GLASS} emissive={live ? SAGE : PAPER} />
+      {live && <pointLight position={[0, h * 0.75, d / 2 + 0.5]} color={SAGE} intensity={0.9} distance={6} />}
+    </group>
+  );
+}
+
+function CrewMesh({ w, h, d }: { w: number; h: number; d: number }) {
+  return (
+    <group>
+      <RoundedBox args={[w, h, d]} position={[0, h / 2, 0]} radius={0.08} castShadow receiveShadow>
+        <meshStandardMaterial color={CREAM} roughness={0.68} />
+      </RoundedBox>
+      <RoundedBox args={[w + 0.25, 0.2, d + 0.25]} position={[0, h + 0.08, 0]} radius={0.04} castShadow>
+        <meshStandardMaterial color={STEEL} />
+      </RoundedBox>
+      {[-1.4, 0, 1.4].map((x, i) => (
+        <RoundedBox key={x} args={[1.1, 0.12, 0.55]} position={[x, 1.4 + (i % 2) * 1.15, d / 2 + 0.22]} radius={0.03} castShadow>
+          <meshStandardMaterial color={WOOD} />
+        </RoundedBox>
+      ))}
+      <Windows w={w} h={h} d={d} cols={4} rows={3} color={GLASS} emissive={PAPER} />
+    </group>
+  );
+}
+
+function HqMesh({ w, h, d, listed }: { w: number; h: number; d: number; listed: boolean }) {
+  return (
+    <group>
+      <RoundedBox args={[w, h * 0.55, d]} position={[0, h * 0.28, 0]} radius={0.08} castShadow receiveShadow>
+        <meshStandardMaterial color={PAPER} roughness={0.55} />
+      </RoundedBox>
+      <RoundedBox args={[w * 0.72, h * 0.55, d * 0.72]} position={[0, h * 0.72, 0]} radius={0.08} castShadow>
+        <meshStandardMaterial color={CREAM} roughness={0.5} />
+      </RoundedBox>
+      <Windows w={w} h={h * 0.55} d={d} cols={4} rows={2} color={GLASS} emissive={listed ? SAGE : PAPER} />
+      {listed && <Flag position={[w * 0.28, h, d * 0.28]} />}
+    </group>
+  );
+}
+
+function DarkMesh({ w, h, d, hot }: { w: number; h: number; d: number; hot: boolean }) {
+  return (
+    <group>
+      <RoundedBox args={[w, h, d]} position={[0, h / 2, 0]} radius={0.05} castShadow receiveShadow>
+        <meshStandardMaterial color="#2a2622" roughness={0.8} />
+      </RoundedBox>
+      <mesh position={[0, h + 0.85, 0]} castShadow>
+        <cylinderGeometry args={[0.06, 0.08, 1.6, 6]} />
+        <meshStandardMaterial color={STEEL} />
+      </mesh>
+      <mesh position={[0, h * 0.55, d / 2 + 0.05]}>
+        <boxGeometry args={[0.7, 0.55, 0.08]} />
+        <meshStandardMaterial color={INK} emissive={hot ? CRIMSON : STEEL} emissiveIntensity={hot ? 0.8 : 0.15} />
+      </mesh>
+      {hot && <pointLight position={[0, h + 0.4, 0]} color={CRIMSON} intensity={0.9} distance={5} />}
     </group>
   );
 }
 
 function peopleOn(tab: TabId, state: GameState) {
-  if (tab === "crew") return Math.min(8, Math.max(1, state.employees.length));
-  if (tab === "lab") return state.training ? 3 : 1;
+  if (tab === "crew") return Math.min(8, Math.max(2, state.employees.length));
+  if (tab === "lab") return state.training ? 4 : 2;
   if (tab === "cluster") return Math.min(4, 1 + Math.floor((state.gpus.h100 + state.gpus.b200) / 4));
-  if (tab === "store") return state.products.length ? Math.min(6, 2 + Math.floor(state.users / 4000)) : 0;
+  if (tab === "store") return state.products.length ? Math.min(7, 3 + Math.floor(state.users / 3500)) : 1;
   if (tab === "floor") return Math.min(5, 1 + Math.floor(state.employees.length / 4));
   return state.evil > 6 ? 2 : 1;
 }
@@ -435,7 +638,7 @@ function Interior({ tab, state, rank, cards }: { tab: TabId; state: GameState; r
 function LabSet({ training }: { training: boolean }) {
   const glow = useRef<THREE.PointLight>(null);
   useFrame((s) => {
-    if (glow.current) glow.current.intensity = training ? 1.3 + Math.sin(s.clock.elapsedTime * 4.4) * 0.45 : 0.2;
+    if (glow.current) glow.current.intensity = training ? 1.3 + Math.sin(s.clock.elapsedTime * 4.4) * 0.45 : 0.25;
   });
   return (
     <group>
@@ -477,7 +680,7 @@ function Rack({ position, train }: { position: [number, number, number]; train: 
     <group position={position}>
       <mesh castShadow>
         <boxGeometry args={[0.48, 1.5, 0.42]} />
-        <meshStandardMaterial ref={mat} color={INK} emissive={train ? SAGE : COPPER} metalness={0.28} roughness={0.38} />
+        <meshStandardMaterial ref={mat} color={INK} emissive={train ? SAGE : STEEL} metalness={0.28} roughness={0.38} />
       </mesh>
       <mesh position={[0, 0.55, 0.22]}>
         <boxGeometry args={[0.32, 0.08, 0.04]} />
@@ -542,7 +745,7 @@ function BoardSet({ listed, rank }: { listed: boolean; rank: number }) {
       ))}
       <mesh position={[0, 1.15, -1.4]}>
         <boxGeometry args={[2.6, 0.9, 0.08]} />
-        <meshStandardMaterial color={INK} emissive={listed ? SAGE : COPPER} emissiveIntensity={0.35} />
+        <meshStandardMaterial color={INK} emissive={listed ? SAGE : STEEL} emissiveIntensity={0.35} />
       </mesh>
       {rank >= 4 && <Flag position={[2.2, 0, 1.6]} />}
     </group>
@@ -566,9 +769,9 @@ function BunkerSet({ hot }: { hot: boolean }) {
 
 function Pavilion() {
   return (
-    <group position={[-11, 0, 7.5]}>
+    <group position={[-11, 0, 8]}>
       <RoundedBox args={[4.2, 1.8, 3.4]} position={[0, 0.9, 0]} radius={0.08} castShadow>
-        <meshStandardMaterial color={PLASTER} />
+        <meshStandardMaterial color={CREAM} />
       </RoundedBox>
       <RoundedBox args={[4.6, 0.16, 3.8]} position={[0, 1.86, 0]} radius={0.04}>
         <meshStandardMaterial color={SAGE} />
@@ -579,9 +782,9 @@ function Pavilion() {
 
 function Spire({ listed }: { listed: boolean }) {
   return (
-    <group position={[0, 0, -12.6]}>
+    <group position={[0, 0, -13]}>
       <RoundedBox args={[2.4, 9.5, 2.4]} position={[0, 4.75, 0]} radius={0.06} castShadow>
-        <meshStandardMaterial color={PLASTER} metalness={0.12} roughness={0.4} />
+        <meshStandardMaterial color={PAPER} metalness={0.1} roughness={0.4} />
       </RoundedBox>
       <mesh position={[0, 10, 0]}>
         <cylinderGeometry args={[0.08, 0.12, 1.4, 8]} />
@@ -621,7 +824,7 @@ function SelectRing({ on, radius }: { on: boolean; radius: number }) {
   return (
     <mesh ref={ref} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.09, 0]}>
       <ringGeometry args={[radius * 0.88, radius, 48]} />
-      <meshBasicMaterial color={SAGE} transparent opacity={0.85} />
+      <meshBasicMaterial color={PAPER} transparent opacity={0.9} />
     </mesh>
   );
 }
@@ -632,49 +835,64 @@ function GlowPad({ on, radius }: { on: boolean; radius: number }) {
     if (!ref.current) return;
     ref.current.visible = on;
     const mat = ref.current.material as THREE.MeshBasicMaterial;
-    mat.opacity = on ? 0.18 + Math.sin(s.clock.elapsedTime * 3.2) * 0.1 : 0;
+    mat.opacity = on ? 0.22 + Math.sin(s.clock.elapsedTime * 3.2) * 0.1 : 0;
   });
   return (
     <mesh ref={ref} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.07, 0]}>
       <circleGeometry args={[radius, 32]} />
-      <meshBasicMaterial color={SAGE} transparent opacity={0.2} />
+      <meshBasicMaterial color={PAPER} transparent opacity={0.22} />
     </mesh>
   );
 }
 
-function Beacon({ on, height }: { on: boolean; height: number }) {
-  const ref = useRef<THREE.Mesh>(null);
+function TapArrow({ on, height }: { on: boolean; height: number }) {
+  const ref = useRef<THREE.Group>(null);
   useFrame((s) => {
     if (!ref.current) return;
     ref.current.visible = on;
     if (!on) return;
     const t = s.clock.elapsedTime;
-    ref.current.position.y = height + 1.15 + Math.sin(t * 2.6) * 0.22;
-    ref.current.rotation.y = t * 1.8;
-    const mat = ref.current.material as THREE.MeshStandardMaterial;
-    mat.emissiveIntensity = 0.9 + Math.sin(t * 4.2) * 0.45;
+    ref.current.position.y = height + 2.35 + Math.sin(t * 3.6) * 0.38;
   });
   return (
-    <mesh ref={ref} position={[0, height + 1.15, 0]}>
-      <octahedronGeometry args={[0.32, 0]} />
-      <meshStandardMaterial color={SAGE} emissive={SAGE} emissiveIntensity={1} toneMapped={false} />
-    </mesh>
+    <group ref={ref} position={[0, height + 2.35, 0]}>
+      <mesh rotation={[Math.PI, 0, 0]}>
+        <coneGeometry args={[0.48, 1.05, 8]} />
+        <meshStandardMaterial color={PAPER} emissive={PAPER} emissiveIntensity={0.45} toneMapped={false} />
+      </mesh>
+      <mesh position={[0, 0.85, 0]}>
+        <cylinderGeometry args={[0.16, 0.16, 0.7, 8]} />
+        <meshStandardMaterial color={PAPER} emissive={PAPER} emissiveIntensity={0.35} toneMapped={false} />
+      </mesh>
+    </group>
   );
 }
 
-function BuildingLabel({ label, height, active, hint }: { label: string; height: number; active: boolean; hint: boolean }) {
+function BuildingLabel({
+  label,
+  height,
+  active,
+  hint,
+  extra,
+}: {
+  label: string;
+  height: number;
+  active: boolean;
+  hint: boolean;
+  extra: string | null;
+}) {
   return (
-    <Html position={[0, height + 1.85, 0]} center distanceFactor={28} style={{ pointerEvents: "none" }}>
+    <Html position={[0, height + 2.05, 0]} center distanceFactor={26} style={{ pointerEvents: "none" }}>
       <div
         className={`rounded-full border px-2.5 py-1 text-xs font-medium whitespace-nowrap ${
           hint
-            ? "border-accent bg-accent text-ink"
+            ? "border-paper bg-paper text-ink"
             : active
               ? "border-paper bg-paper text-ink"
               : "border-border bg-bg/80 text-paper"
         }`}
       >
-        {hint ? `Tap ${label}` : label}
+        {hint ? `Tap ${label}` : extra ? extra : label}
       </div>
     </Html>
   );
@@ -695,13 +913,10 @@ function FloorWalker({ index, count, y, seed }: { index: number; count: number; 
   useFrame((s) => {
     if (!ref.current) return;
     const t = s.clock.elapsedTime * (0.22 + (seed % 3) * 0.04) + (index / Math.max(1, count)) * Math.PI * 2;
-    const rx = 1.5;
-    const rz = 1.1;
-    ref.current.position.set(Math.cos(t) * rx, y, Math.sin(t) * rz);
+    ref.current.position.set(Math.cos(t) * 1.5, y + Math.abs(Math.sin(s.clock.elapsedTime * 7 + index)) * 0.04, Math.sin(t) * 1.1);
     ref.current.rotation.y = -t + Math.PI / 2;
-    ref.current.position.y = y + Math.abs(Math.sin(s.clock.elapsedTime * 7 + index)) * 0.04;
   });
-  const color = index % 3 === 0 ? SAGE : index % 3 === 1 ? COPPER : PAPER;
+  const color = index % 3 === 0 ? "#4a7c59" : index % 3 === 1 ? "#c4785a" : PAPER;
   return (
     <group ref={ref}>
       <mesh castShadow>
@@ -748,7 +963,7 @@ function Car({ offset, color }: { offset: number; color: string }) {
   const at = useMemo(() => new THREE.Vector3(), []);
   const look = useMemo(() => new THREE.Vector3(), []);
   useFrame((s) => {
-    const t = (s.clock.elapsedTime * 0.018 + offset) % 1;
+    const t = (s.clock.elapsedTime * 0.02 + offset) % 1;
     ROAD.getPointAt(t, at);
     ROAD.getPointAt((t + 0.016) % 1, look);
     if (!ref.current) return;
@@ -757,7 +972,7 @@ function Car({ offset, color }: { offset: number; color: string }) {
   });
   return (
     <group ref={ref}>
-      <RoundedBox args={[0.9, 0.32, 0.48]} position={[0, 0.1, 0]} radius={0.04} castShadow>
+      <RoundedBox args={[0.95, 0.34, 0.5]} position={[0, 0.1, 0]} radius={0.05} castShadow>
         <meshStandardMaterial color={color} roughness={0.4} metalness={0.2} />
       </RoundedBox>
       <RoundedBox args={[0.5, 0.22, 0.44]} position={[-0.05, 0.32, 0]} radius={0.04} castShadow>
@@ -769,14 +984,16 @@ function Car({ offset, color }: { offset: number; color: string }) {
 
 function Trees() {
   const spots: [number, number][] = [
-    [-12, 3],
-    [-11, -6],
-    [12, -5],
-    [13, 3],
-    [-4, 14],
-    [5, 14],
-    [-13, -11],
-    [14, -11],
+    [-12, 3.2],
+    [-11.2, -6.4],
+    [12.4, -5.2],
+    [13.2, 3.4],
+    [-4.2, 14.2],
+    [5.4, 14.4],
+    [-13.2, -11],
+    [14.2, -11.2],
+    [0.2, -9.6],
+    [-8.4, 11.2],
   ];
   return (
     <group>
@@ -796,11 +1013,11 @@ function Tree({ position, phase }: { position: [number, number, number]; phase: 
     <group position={position}>
       <mesh position={[0, 0.6, 0]} castShadow>
         <cylinderGeometry args={[0.13, 0.18, 1.2, 6]} />
-        <meshStandardMaterial color="#4a372c" />
+        <meshStandardMaterial color="#6a4a32" />
       </mesh>
-      <mesh ref={crown} position={[0, 1.7, 0]} castShadow>
-        <coneGeometry args={[0.85, 1.8, 7]} />
-        <meshStandardMaterial color="#3d5a48" />
+      <mesh ref={crown} position={[0, 1.75, 0]} castShadow>
+        <sphereGeometry args={[0.95, 8, 8]} />
+        <meshStandardMaterial color={phase % 2 ? "#4a9a48" : "#3d8a40"} />
       </mesh>
     </group>
   );
@@ -812,9 +1029,9 @@ function CoinFountain({ origin }: { origin: [number, number, number] }) {
     if (!group.current) return;
     const t = s.clock.elapsedTime;
     group.current.children.forEach((ch, i) => {
-      const u = (t * 0.42 + i / 14) % 1;
-      ch.position.set(Math.cos(i * 1.7) * 0.45, 2.4 + u * 2.6, Math.sin(i * 1.7) * 0.45);
-      ch.rotation.y = t * 2.2 + i;
+      const u = (t * 0.48 + i / 16) % 1;
+      ch.position.set(Math.cos(i * 1.7) * 0.5, 2.5 + u * 2.8, Math.sin(i * 1.7) * 0.5);
+      ch.rotation.y = t * 2.4 + i;
       const mesh = ch as THREE.Mesh;
       const mat = mesh.material as THREE.MeshStandardMaterial;
       mat.opacity = 1 - u;
@@ -822,10 +1039,10 @@ function CoinFountain({ origin }: { origin: [number, number, number] }) {
   });
   return (
     <group ref={group} position={origin}>
-      {Array.from({ length: 14 }).map((_, i) => (
+      {Array.from({ length: 16 }).map((_, i) => (
         <mesh key={i}>
-          <cylinderGeometry args={[0.11, 0.11, 0.04, 12]} />
-          <meshStandardMaterial color={COPPER} emissive={COPPER} emissiveIntensity={0.55} transparent opacity={1} />
+          <cylinderGeometry args={[0.12, 0.12, 0.045, 12]} />
+          <meshStandardMaterial color={PAPER} emissive={PAPER} emissiveIntensity={0.55} transparent opacity={1} />
         </mesh>
       ))}
     </group>
@@ -850,7 +1067,7 @@ export function TitleCampus() {
       products: [
         {
           id: "p0",
-          modelId: "m0",
+          modelId: s.models[0]?.id ?? "m0",
           kind: "chat" as const,
           name: "Helix Chat",
           users: 4200,

@@ -42,7 +42,7 @@ import type {
 } from "./types";
 import { SAVE_VERSION } from "./types";
 
-export const DAY_MS = 4200;
+export const DAY_MS = 3000;
 const BROKE_LIMIT = 90;
 const HYPE_DECAY = 0.05;
 
@@ -208,22 +208,22 @@ export function derive(s: GameState): Derived {
   const idleTrain = !s.training && s.trainPct > 8;
   const idleServe = s.products.length === 0 && s.trainPct < 92;
 
-  let hint = "Tap the glowing Lab. Train your first 8B — one button.";
+  let hint = "Tap the bouncing Lab. Open Chat. Money starts.";
   let hintTab: Derived["hintTab"] = "lab";
   if (s.training) {
     hint =
       c.trainPower < 0.08
         ? "Slide GPUs toward Train — the job is starved."
-        : `${s.training.name} is cooking · ~${trainDaysLeft}d. Sit tight or speed up.`;
+        : `${s.training.name} is cooking · ~${trainDaysLeft}d.`;
     hintTab = c.trainPower < 0.08 ? "cluster" : "lab";
   } else if (s.models.length === 0) {
-    hint = "Tap Lab and hit Train. That is the whole first move.";
+    hint = "Tap the bouncing Lab. Train your first 8B.";
     hintTab = "lab";
   } else if (s.products.length === 0) {
-    hint = "Weights are ready. Tap Lab → Open Chat. Money starts overnight.";
+    hint = "Your 8B is ready. Tap Lab, then Open Chat.";
     hintTab = "lab";
   } else if (s.trainPct > 78 && demandB200 > 0.05) {
-    hint = "People are in Chat but racks are training. Tap GPUs → Serve.";
+    hint = "Chat is live but racks are training. Tap GPUs → Serve.";
     hintTab = "cluster";
   } else if (c.prodB200 < 0.05 && s.products.length > 0) {
     hint = "Nothing is serving. Tap GPUs and slide toward Serve.";
@@ -232,16 +232,16 @@ export function derive(s: GameState): Derived {
     hint = `Cluster is full (${Math.round(utilProd * 100)}%). Buy another card.`;
     hintTab = "cluster";
   } else if (revenue < burn * 0.4 && s.products.length > 0) {
-    hint = "Tap Shop and run the cheap ads. Users pay rent.";
+    hint = "Tap Shop and run ads. More users, more rent.";
     hintTab = "store";
   } else if (s.cash < burn * 18 && s.nextRound) {
     hint = `Runway ${runway}d. Tap HQ and raise.`;
     hintTab = "floor";
   } else if (s.products.length > 0 && s.models.every((m) => m.classId === "mini") && s.research >= 18) {
-    hint = "In the black? Train a 13B in Lab.";
+    hint = "You're making money. Tap Lab and train a 13B.";
     hintTab = "lab";
   } else {
-    hint = profit >= 0 ? "You are making money. Buy GPUs or hire. Keep tapping." : "Tap Shop, run ads, watch the till.";
+    hint = profit >= 0 ? "You're making money. Buy GPUs or hire." : "Tap Shop, run ads, watch the till.";
     hintTab = profit >= 0 ? "cluster" : "store";
   }
 
@@ -340,14 +340,14 @@ export function createGame(company: string, seed = Math.floor(Math.random() * 1e
     speed: 1,
     company: name,
     family,
-    cash: 420_000,
+    cash: 500_000,
     equity: 1,
     hype: 12,
     quality: 12,
     research: 48,
     compute: 80,
     gpus: { h100: 2, b200: 0, gb200: 0 },
-    trainPct: 60,
+    trainPct: 35,
     gpuOrders: [],
     scandal: 0,
     heat: 2,
@@ -360,7 +360,18 @@ export function createGame(company: string, seed = Math.floor(Math.random() * 1e
     gpuShortageUntil: 0,
     employees: [{ id: "founder", roleId: "researcher", name: "You", hiredOn: 0, morale: 80 }],
     training: null,
-    models: [],
+    models: [
+      {
+        id: "m-founding",
+        classId: "mini",
+        name: modelName(family, classById("mini"), 1),
+        version: 1,
+        quality: 32,
+        shipped: false,
+        fakeBench: false,
+        trainedOn: 0,
+      },
+    ],
     products: [],
     users: 0,
     revenueToday: 0,
@@ -390,8 +401,8 @@ export function createGame(company: string, seed = Math.floor(Math.random() * 1e
     lastRealMs: Date.now(),
     gen: 0,
   };
-  s = news(s, `${s.company} opens. Two H100s are already humming.`);
-  s = news(s, "Tap Lab. Train. Open Chat. That is how you make money.", "good");
+  s = news(s, `${s.company} opens on a green lot. An 8B is already on disk.`);
+  s = news(s, "Tap the bouncing Lab. Open Chat. Watch the till fill.", "good");
   return { ...s, valuation: valuationOf(s) };
 }
 
@@ -759,7 +770,7 @@ export function launchProduct(s: GameState, modelId: string, kind: ProductKind):
       ? Math.max(12, Math.floor(convert * 0.06 + t.sales * 8))
       : kind === "api"
         ? Math.max(80, Math.floor(convert * 0.28))
-        : Math.max(2800, convert + 1200);
+        : Math.max(8000, convert + 2500);
   const price = kind === "chat" ? cls.chatPrice : kind === "api" ? cls.apiPrice : cls.entPrice;
   const product: Product = {
     id: `p-${s.day}-${kind}-${model.id}`,

@@ -1,5 +1,5 @@
-export const SAVE_VERSION = 4 as const;
-export const SAVE_KEY = "ai-hype-tycoon-v4";
+export const SAVE_VERSION = 5 as const;
+export const SAVE_KEY = "ai-hype-tycoon-v5";
 
 export type Speed = 0 | 1 | 2 | 4;
 export type Tone = "ok" | "good" | "bad" | "evil";

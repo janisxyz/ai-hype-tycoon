@@ -29,21 +29,23 @@ class MainActivity : ComponentActivity() {
             .build()
 
         webView = WebView(this).apply {
-            setBackgroundColor(0xFF0C0C0B.toInt())
+            setBackgroundColor(0xFF8ECAE6.toInt())
             overScrollMode = View.OVER_SCROLL_NEVER
             isNestedScrollingEnabled = false
+            setLayerType(View.LAYER_TYPE_HARDWARE, null)
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
             settings.databaseEnabled = true
             settings.allowFileAccess = true
             settings.allowContentAccess = true
             settings.mediaPlaybackRequiresUserGesture = false
-            settings.cacheMode = WebSettings.LOAD_DEFAULT
+            settings.cacheMode = WebSettings.LOAD_NO_CACHE
             settings.useWideViewPort = true
             settings.loadWithOverviewMode = true
             settings.setSupportZoom(false)
             settings.builtInZoomControls = false
             settings.displayZoomControls = false
+            settings.offscreenPreRaster = true
             settings.mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
             webViewClient = object : WebViewClient() {
                 override fun shouldInterceptRequest(

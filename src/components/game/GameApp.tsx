@@ -31,25 +31,18 @@ export function GameApp() {
   const [sheet, setSheet] = useState(false);
   const seenMilestones = useRef<Set<string>>(new Set());
   const [banner, setBanner] = useState<{ title: string; body: string } | null>(null);
-  const bootLab = useRef(false);
+  const hadProduct = useRef(false);
 
   useEffect(() => {
     if (!state) {
-      bootLab.current = false;
+      hadProduct.current = false;
       setSheet(false);
       return;
     }
-    if (bootLab.current) return;
-    if (state.models.length || state.training || state.products.length) {
-      bootLab.current = true;
-      return;
+    if (state.products.length > 0 && !hadProduct.current) {
+      hadProduct.current = true;
+      setSheet(false);
     }
-    bootLab.current = true;
-    const id = window.setTimeout(() => {
-      setTab("lab");
-      setSheet(true);
-    }, 800);
-    return () => window.clearTimeout(id);
   }, [state]);
 
   useEffect(() => {
@@ -121,7 +114,7 @@ export function GameApp() {
           seenMilestones.current = new Set();
           useGame.getState().newGame(name);
           setTab("lab");
-          setSheet(true);
+          setSheet(false);
         }}
         onContinue={() => {
           unlockAudio();
@@ -179,9 +172,9 @@ export function GameApp() {
             <button
               type="button"
               onClick={() => open(d.hintTab)}
-              className="pointer-events-auto hint-pulse w-full rounded-lg border border-accent/40 bg-bg/75 px-3 py-2 text-left shadow-soft backdrop-blur-sm"
+              className="pointer-events-auto hint-pulse w-full rounded-lg border border-paper/50 bg-bg/80 px-4 py-3 text-left shadow-soft backdrop-blur-sm"
             >
-              <p className="kicker text-accent">Tap the glowing building</p>
+              <p className="kicker text-paper">Tap the bouncing building</p>
               <p className="mt-0.5 text-sm text-paper">{d.hint}</p>
             </button>
           </div>

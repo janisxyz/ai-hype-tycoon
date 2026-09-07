@@ -77,7 +77,7 @@ export const useGame = create<GameStore>((set, get) => ({
   newGame: (company) => {
     const state = createGame(company);
     writeSave(state);
-    set({ state, toast: "Tap the glowing Lab. Train. Then open Chat." });
+    set({ state, toast: "Tap the bouncing Lab. Then Open Chat." });
   },
   continueGame: () => {
     const saved = loadSave();

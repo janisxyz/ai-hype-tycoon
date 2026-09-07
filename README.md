@@ -1,10 +1,10 @@
 # AI Hype Tycoon
 
-Idle AI-startup tycoon. A living **3D campus** — tap a building, a sheet slides up, you train, open Chat, and money starts the same night.
+Idle AI-startup tycoon. A living **3D campus** — tap a building, a sheet slides up, you open Chat, and money starts the same night.
 
 ## Play
 
-Tap the glowing Lab. Train an 8B. Open Chat. Cash comes in. Ads, GPUs, and hires are how you scale. The tape never ends.
+Tap the bouncing Lab. Open Chat. Cash comes in. Ads, GPUs, and hires are how you scale. The tape never ends.
 
 Progress autosaves on this device.
 
