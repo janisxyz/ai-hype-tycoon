@@ -25,6 +25,15 @@ jobs:
         with:
           ref: ${{ inputs.tag || github.ref }}
 
+      - name: Read version
+        id: ver
+        run: |
+          FILE=android/version.properties
+          CODE=$(grep -E '^versionCode=' "$FILE" | cut -d= -f2 | tr -d '[:space:]')
+          NAME=$(grep -E '^versionName=' "$FILE" | cut -d= -f2 | tr -d '[:space:]')
+          echo "code=${CODE}" >> "$GITHUB_OUTPUT"
+          echo "name=${NAME}" >> "$GITHUB_OUTPUT"
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -46,9 +55,12 @@ jobs:
 
       - name: Bundle release
         working-directory: android
+        env:
+          VERSION_CODE: ${{ steps.ver.outputs.code }}
+          VERSION_NAME: ${{ steps.ver.outputs.name }}
         run: gradle :app:bundleRelease --no-daemon
 
       - uses: actions/upload-artifact@v4
         with:
-          name: AI-Hype-Tycoon-play-aab
+          name: AI-Hype-Tycoon-${{ steps.ver.outputs.name }}-play-aab
           path: android/app/build/outputs/bundle/release/*.aab

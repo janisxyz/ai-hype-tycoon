@@ -21,19 +21,19 @@ The Android app is a native Kotlin / Jetpack Compose port of the same tycoon.
 ## Android (Google Play)
 
 Package: `com.aihypetycoon.app`  
-Version: `2.1.0` (versionCode 3)  
+Version: auto-bumped from [`android/version.properties`](android/version.properties)  
 Min SDK 26 · Target SDK 35 · Compose
 
-CI builds a **debug APK** (sideload) and a **release AAB** (Play Console) on every push to `main`, then publishes a GitHub Release.
+**Every commit to `main` bumps the patch version + `versionCode`, builds a release APK and Play AAB, and publishes a GitHub Release.** PRs build without bumping. A follow-up `chore(release)` commit with `[skip ci]` writes the new version back to the repo so tags and Play uploads stay in lockstep.
 
 ### GitHub Actions
 
 | Workflow | What it produces |
 | --- | --- |
-| `.github/workflows/android.yml` | Debug APK + release AAB on push / PR, GitHub Release on `main` |
+| `.github/workflows/android.yml` | Auto-bump → **release APK** + AAB on every `main` commit, GitHub Release tagged `vX.Y.Z` |
 | `.github/workflows/release-play.yml` | Signed Play AAB, manual dispatch |
 
-If signing secrets are missing, the release AAB is still produced, signed with the debug key so CI stays green. **Do not upload a debug-signed AAB to Play.**
+If signing secrets are missing, the release APK/AAB is still produced, signed with the debug key so CI stays green. **Do not upload a debug-signed AAB to Play.** Sideload the APK from the GitHub Release instead.
 
 ### Upload key (required for Play)
 
@@ -55,10 +55,16 @@ Keep the jks offline. Google Play App Signing will hold the distribution cert; t
 
 ```bash
 cd android
-gradle :app:assembleDebug :app:bundleRelease
+gradle :app:assembleRelease :app:bundleRelease
 ```
 
-APK: `android/app/build/outputs/apk/debug/`  
+Version comes from `android/version.properties`, or override:
+
+```bash
+VERSION_CODE=12 VERSION_NAME=2.1.9 gradle :app:assembleRelease
+```
+
+APK: `android/app/build/outputs/apk/release/`  
 AAB: `android/app/build/outputs/bundle/release/`
 
 ## Endings

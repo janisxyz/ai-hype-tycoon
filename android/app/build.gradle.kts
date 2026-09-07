@@ -14,6 +14,19 @@ val local = Properties()
 val localFile = rootProject.file("keystore.properties")
 if (localFile.exists()) localFile.inputStream().use { local.load(it) }
 
+val versionProps = Properties()
+val versionFile = rootProject.file("version.properties")
+if (versionFile.exists()) versionFile.inputStream().use { versionProps.load(it) }
+
+fun resolveVersion(key: String, envName: String, fallback: String): String =
+    System.getenv(envName)
+        ?: project.findProperty(key)?.toString()
+        ?: versionProps.getProperty(key)
+        ?: fallback
+
+val appVersionCode = resolveVersion("versionCode", "VERSION_CODE", "1").toInt()
+val appVersionName = resolveVersion("versionName", "VERSION_NAME", "0.0.1")
+
 android {
     namespace = "com.aihypetycoon.app"
     compileSdk = 35
@@ -22,8 +35,8 @@ android {
         applicationId = "com.aihypetycoon.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 3
-        versionName = "2.1.0"
+        versionCode = appVersionCode
+        versionName = appVersionName
         vectorDrawables.useSupportLibrary = true
     }
 

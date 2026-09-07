@@ -12,7 +12,7 @@ Play it clean — or steal papers, fake benchmarks, and farm a waitlist of bots.
 
 Single player. Offline. No ads. Progress saves on your phone.
 
-**What's new (2.1).** Living headquarters instead of a text dump. Slower days. Products and revenue. Unlimited timeline after listing. Play-ready 2.1.0.
+**What's new (2.1).** Living headquarters instead of a text dump. Slower days. Products and revenue. Unlimited timeline after listing. Auto-bumped release APK on every commit.
 
 **Category.** Simulation / Casual  
 **Content rating.** PEGI 12 / ESRB Teen — mild language in satirical events, no violence, no real-money gambling, no user-generated chat.  
@@ -26,5 +26,5 @@ Single player. Offline. No ads. Progress saves on your phone.
 - Phone screenshots ≥ 16:9 or 9:16, at least two
 
 **Application ID.** `com.aihypetycoon.app`  
-**Version.** 2.1.0 (versionCode 3)  
-**Release.** AAB from the Android workflow (or Signed Play AAB if you have an upload key), plus a Play Console app created as a game / simulation.
+**Version.** Auto-bumped. Source of truth: `android/version.properties` (`versionName` + `versionCode`). Every push to `main` increments the patch and `versionCode`, then publishes a GitHub Release with a sideload APK and a Play AAB.  
+**Release.** AAB from the Release APK workflow (or Signed Play AAB if you have an upload key), plus a Play Console app created as a game / simulation.
