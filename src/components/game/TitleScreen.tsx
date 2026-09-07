@@ -22,42 +22,34 @@ export function TitleScreen({
   }, []);
 
   return (
-    <div className="relative min-h-dvh overflow-hidden bg-bg">
-      <div className="absolute inset-0">
+    <div className="game-shell bg-bg">
+      <div className="game-map">
         <TitleCampus />
       </div>
-      <div className="absolute inset-0 bg-gradient-to-t from-bg from-10% via-transparent to-transparent pointer-events-none" />
-      <div className="pointer-events-none relative z-10 mx-auto flex min-h-dvh max-w-xl flex-col justify-between px-5 pb-8 pt-8">
+      <div className="game-hud-col">
         <div>
-          <p className="kicker text-paper/80">3D idle campus</p>
-          <h1 className="mt-2 font-display text-4xl leading-[0.95] italic sm:text-5xl">AI Hype Tycoon</h1>
+          <p className="kicker text-paper">3D idle campus</p>
+          <h1 className="mt-2 font-display text-4xl leading-[0.95] italic text-paper sm:text-5xl">AI Hype Tycoon</h1>
         </div>
-        <div>
-        <p className="max-w-md text-sm text-paper/90">
-          Tap the bouncing Lab. Open Chat. Money starts on the first night — you cannot go broke learning the map.
-        </p>
-        <label className="pointer-events-auto mt-5 block text-xs font-medium tracking-wide text-muted uppercase">
-          Company
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            maxLength={32}
-            className="mt-2 min-h-12 w-full rounded-lg border border-border bg-surface/90 px-3 font-sans text-base text-fg outline-none focus:border-border-strong"
-          />
-        </label>
-        <div className="pointer-events-auto mt-4 flex flex-col gap-2">
-          <button
-            type="button"
-            onClick={() => onStart(name)}
-            className="min-h-12 rounded-lg bg-paper px-5 text-sm font-semibold text-ink transition-transform duration-150 active:scale-[0.98]"
-          >
+        <div className="game-panel">
+          <p className="text-sm text-paper">Tap the bouncing Lab. Open Chat. Money starts tonight.</p>
+          <label className="mt-4 block text-xs font-medium tracking-wide text-muted uppercase">
+            Company
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              maxLength={32}
+              className="game-field"
+            />
+          </label>
+          <button type="button" onClick={() => onStart(name)} className="game-cta">
             Play
           </button>
           {saved && (
             <button
               type="button"
               onClick={onContinue}
-              className="min-h-12 rounded-lg border border-border bg-surface/80 px-5 text-sm font-medium text-fg"
+              className="mt-2 min-h-12 w-full rounded-lg border border-border bg-surface/80 text-sm font-medium text-fg"
             >
               Continue {saved.company}
               <span className="ml-2 text-subtle">
@@ -65,7 +57,6 @@ export function TitleScreen({
               </span>
             </button>
           )}
-        </div>
         </div>
       </div>
     </div>

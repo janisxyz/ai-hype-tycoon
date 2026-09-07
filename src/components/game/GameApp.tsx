@@ -161,7 +161,7 @@ export function GameApp() {
   };
 
   return (
-    <div className="relative h-dvh overflow-hidden bg-bg text-fg">
+    <div className="game-shell bg-bg text-fg">
       <CampusMap state={state} selected={sheet ? tab : null} onSelect={open} />
       <Hud state={state} />
       <Juice cash={state.cash} rev={d.revenue} />

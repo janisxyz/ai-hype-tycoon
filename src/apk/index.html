@@ -6,17 +6,82 @@
       name="viewport"
       content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no"
     />
-    <meta name="theme-color" content="#8ecae6" />
+    <meta name="theme-color" content="#6eb5d6" />
     <title>AI Hype Tycoon</title>
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500;1,9..144,600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap"
+    />
     <style>
       html,
       body,
       #root {
         height: 100%;
         margin: 0;
-        background: #8ecae6;
-        color: #1c1a16;
+        background: #6eb5d6;
+        color: #e7e2d6;
         overscroll-behavior: none;
+      }
+      #root > div {
+        position: relative;
+        height: 100%;
+        overflow: hidden;
+      }
+      .game-shell {
+        position: relative;
+        height: 100%;
+        overflow: hidden;
+      }
+      .game-map {
+        position: absolute;
+        inset: 0;
+      }
+      .game-map canvas {
+        display: block;
+        width: 100% !important;
+        height: 100% !important;
+      }
+      .game-hud-col {
+        position: absolute;
+        inset: 0;
+        z-index: 10;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        pointer-events: none;
+        padding: 28px 20px calc(20px + env(safe-area-inset-bottom, 0px));
+      }
+      .game-panel {
+        pointer-events: auto;
+        border-radius: 16px;
+        background: rgba(12, 12, 11, 0.88);
+        padding: 16px;
+      }
+      .game-cta {
+        pointer-events: auto;
+        display: block;
+        width: 100%;
+        min-height: 52px;
+        margin-top: 12px;
+        border: 0;
+        border-radius: 12px;
+        background: #e7e2d6;
+        color: #0c0c0b;
+        font: 600 16px/1.2 "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+      }
+      .game-field {
+        pointer-events: auto;
+        display: block;
+        width: 100%;
+        min-height: 48px;
+        margin-top: 8px;
+        box-sizing: border-box;
+        border: 1px solid rgba(231, 226, 214, 0.22);
+        border-radius: 12px;
+        background: #161614;
+        color: #e7e2d6;
+        padding: 0 12px;
+        font: 16px/1.2 "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
       }
     </style>
   </head>

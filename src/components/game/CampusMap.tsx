@@ -109,7 +109,7 @@ export function CampusMap({ state, selected, onSelect, preview = false }: MapPro
   }
 
   return (
-    <div className="absolute inset-0">
+    <div className="game-map">
       <MapError
         fallback={
           <IsoFallback
@@ -403,14 +403,16 @@ function LotBuilding({
       </group>
       <SelectRing on={selected} radius={Math.max(w, d) * 0.62} />
       <GlowPad on={hinted} radius={Math.max(w, d) * 0.74} />
-      <TapArrow on={hinted} height={h} />
-      <BuildingLabel
-        label={lot.label}
-        height={h}
-        active={selected || hinted}
-        hint={hinted}
-        extra={lot.tab === "store" && revenue > 8 ? `${money(revenue)}/d` : null}
-      />
+      <TapArrow on={hinted && !preview} height={h} />
+      {!preview && (
+        <BuildingLabel
+          label={lot.label}
+          height={h}
+          active={selected || hinted}
+          hint={hinted}
+          extra={lot.tab === "store" && revenue > 8 ? `${money(revenue)}/d` : null}
+        />
+      )}
       <mesh
         position={[0, h * 0.5, 0]}
         onClick={(e) => {
