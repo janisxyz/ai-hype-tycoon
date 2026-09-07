@@ -70,6 +70,17 @@ jobs:
           git commit -m "chore(release): v${{ steps.ver.outputs.name }} [skip ci]"
           git push origin HEAD:${{ github.ref_name }}
 
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install JS deps
+        run: npm install --no-audit --no-fund
+
+      - name: Build 3D game into Android assets
+        run: npm run build:apk
+
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
@@ -130,6 +141,6 @@ jobs:
           body: |
             **${{ steps.ver.outputs.name }}** (versionCode ${{ steps.ver.outputs.code }})
 
-            Sideload the **release APK**. Upload the **AAB** to Play Console if it is signed with your upload key.
+            Sideload the **release APK**. This build is the 3D campus — tap Lab, train, open Chat.
 
-            Every push to `main` auto-bumps the patch version and ships a new APK.
+            Upload the **AAB** to Play Console if it is signed with your upload key.
