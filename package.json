@@ -1,0 +1,28 @@
+{
+  "name": "ai-hype-tycoon",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build:apk": "vite build --config vite.apk.config.ts"
+  },
+  "dependencies": {
+    "@react-three/drei": "^10.7.8",
+    "@react-three/fiber": "^9.7.0",
+    "@tailwindcss/vite": "^4.3.0",
+    "lucide-react": "^0.510.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "tailwindcss": "^4.3.0",
+    "three": "^0.185.1",
+    "vaul": "^1.1.2",
+    "zustand": "^5.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-react": "^5.2.0",
+    "typescript": "^5.8.2",
+    "vite": "^7.1.0",
+    "vite-plugin-singlefile": "^2.3.3"
+  }
+}

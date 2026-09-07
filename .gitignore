@@ -7,3 +7,4 @@ local.properties
 app/keystore.jks
 keystore.properties
 .DS_Store
+android/app/src/main/assets/www/
