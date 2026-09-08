@@ -14,13 +14,13 @@ import { Hud } from "./Hud";
 import { Juice } from "./Juice";
 import { TitleScreen } from "./TitleScreen";
 
-const TABS: { id: TabId; label: string; icon: typeof Building2 }[] = [
-  { id: "lab", label: "Lab", icon: FlaskConical },
-  { id: "cluster", label: "GPUs", icon: Cpu },
-  { id: "store", label: "Sell", icon: Store },
-  { id: "crew", label: "Crew", icon: Users },
-  { id: "floor", label: "HQ", icon: Building2 },
-  { id: "shadow", label: "Dark", icon: Skull },
+const TABS: { id: TabId; label: string; icon: typeof Building2; orb: string }[] = [
+  { id: "lab", label: "Lab", icon: FlaskConical, orb: "dock-lab" },
+  { id: "cluster", label: "GPUs", icon: Cpu, orb: "dock-gpu" },
+  { id: "store", label: "Sell", icon: Store, orb: "dock-sell" },
+  { id: "crew", label: "Crew", icon: Users, orb: "dock-crew" },
+  { id: "floor", label: "HQ", icon: Building2, orb: "dock-hq" },
+  { id: "shadow", label: "Dark", icon: Skull, orb: "dock-dark" },
 ];
 
 export function GameApp() {
@@ -161,25 +161,21 @@ export function GameApp() {
   };
 
   return (
-    <div className="game-shell bg-bg text-fg">
+    <div className="game-shell text-ink">
       <CampusMap state={state} selected={sheet ? tab : null} onSelect={open} />
       <Hud state={state} />
       <Juice cash={state.cash} rev={d.revenue} />
 
       {!sheet && (
         <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20">
-          <div className="mx-auto max-w-2xl px-3">
-            <button
-              type="button"
-              onClick={() => open(d.hintTab)}
-              className="glass hint-pulse pointer-events-auto w-full rounded-2xl px-4 py-3 text-left"
-            >
-              <p className="kicker">Next move</p>
-              <p className="mt-0.5 text-sm text-paper">{d.hint}</p>
+          <div className="mx-auto max-w-xl px-3">
+            <button type="button" onClick={() => open(d.hintTab)} className="hint-card hint-pulse px-4 py-3">
+              <p className="kicker">Tap the bouncing building</p>
+              <p className="mt-0.5 text-sm font-extrabold">{d.hint}</p>
             </button>
           </div>
           <div className="px-3 pb-[calc(10px+env(safe-area-inset-bottom))] pt-2">
-            <nav className="glass dock mx-auto max-w-2xl">
+            <nav className="dock mx-auto max-w-xl">
               {TABS.map((t) => {
                 const Icon = t.icon;
                 const pulse = d.hintTab === t.id;
@@ -190,7 +186,9 @@ export function GameApp() {
                     onClick={() => open(t.id)}
                     className={`dock-item ${pulse ? "is-hint" : ""}`}
                   >
-                    <Icon className="h-4 w-4" />
+                    <span className={`dock-orb ${t.orb}`}>
+                      <Icon className="h-5 w-5" strokeWidth={2.6} />
+                    </span>
                     {t.label}
                   </button>
                 );
@@ -202,7 +200,7 @@ export function GameApp() {
 
       <ActionSheet tab={tab} open={sheet} state={state} onClose={() => setSheet(false)} />
 
-      <a href="/privacy" className="absolute bottom-1 right-3 z-10 hidden text-xs text-subtle hover:text-muted lg:block">
+      <a href="/privacy" className="absolute bottom-1 right-3 z-10 hidden text-xs font-bold text-ink/70 hover:text-ink lg:block">
         Privacy
       </a>
 
@@ -218,17 +216,17 @@ export function GameApp() {
       {toast && (
         <div
           role="status"
-          className="fade-up glass pointer-events-none fixed inset-x-0 bottom-40 z-40 mx-auto w-max max-w-[min(92vw,28rem)] rounded-2xl px-4 py-2 text-sm text-paper"
+          className="fade-up toast-card pointer-events-none fixed inset-x-0 bottom-40 z-40 mx-auto w-max max-w-[min(92vw,28rem)] rounded-2xl px-4 py-2 text-sm font-extrabold"
         >
           {toast}
         </div>
       )}
 
       {banner && (
-        <div className="fade-up glass pointer-events-none fixed inset-x-0 top-28 z-40 mx-auto w-max max-w-[min(92vw,24rem)] rounded-2xl px-5 py-3 text-center">
+        <div className="fade-up banner-card pointer-events-none fixed inset-x-0 top-28 z-40 mx-auto w-max max-w-[min(92vw,24rem)] rounded-2xl px-5 py-3 text-center">
           <p className="kicker">Milestone</p>
-          <p className="mt-1 font-display text-2xl italic text-paper">{banner.title}</p>
-          <p className="mt-1 text-xs text-muted">{banner.body}</p>
+          <p className="mt-1 font-display text-2xl font-black">{banner.title}</p>
+          <p className="mt-1 text-xs font-bold text-muted">{banner.body}</p>
         </div>
       )}
     </div>
