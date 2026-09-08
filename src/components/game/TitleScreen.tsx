@@ -22,34 +22,18 @@ export function TitleScreen({
   }, []);
 
   return (
-    <div className="game-shell bg-bg">
+    <div className="game-shell">
       <div className="game-map">
         <TitleCampus />
       </div>
       <div className="game-hud-col">
-        <div className="pointer-events-none">
-          <p className="kicker text-gold">Frontier lab · idle campus</p>
-          <h1 className="mt-2 max-w-[16ch] font-display text-5xl leading-[0.9] italic text-paper sm:text-6xl">
-            AI Hype Tycoon
-          </h1>
-          <p className="mt-3 max-w-sm text-sm text-paper/75">
-            Raise. Hire. Ship vapor. Go public. The tape never ends.
-          </p>
+        <div className="game-panel max-w-md">
+          <p className="kicker">Idle campus tycoon</p>
+          <h1 className="mt-1 font-display text-4xl font-black leading-[0.95] sm:text-5xl">AI Hype Tycoon</h1>
         </div>
-        <div className="game-panel">
-          <div className="mb-3 grid grid-cols-3 gap-2">
-            {[
-              { k: "01", v: "Raise" },
-              { k: "02", v: "Ship" },
-              { k: "03", v: "Loot" },
-            ].map((item) => (
-              <div key={item.k} className="rounded-xl border border-border bg-elevated/70 px-3 py-2">
-                <p className="font-mono text-[10px] tracking-[0.16em] text-gold">{item.k}</p>
-                <p className="mt-0.5 font-display text-lg italic leading-none text-paper">{item.v}</p>
-              </div>
-            ))}
-          </div>
-          <label className="block text-xs font-medium tracking-wide text-muted uppercase">
+        <div className="game-panel max-w-md">
+          <p className="text-sm font-extrabold">Tap the bouncing Lab. Open Chat. Cash starts tonight.</p>
+          <label className="mt-4 block text-xs font-black tracking-wide text-muted uppercase">
             Company
             <input
               value={name}
@@ -62,13 +46,9 @@ export function TitleScreen({
             Open the garage
           </button>
           {saved && (
-            <button
-              type="button"
-              onClick={onContinue}
-              className="mt-2 min-h-12 w-full rounded-xl border border-border bg-surface/80 text-sm font-medium text-fg"
-            >
+            <button type="button" onClick={onContinue} className="game-cta" style={{ background: "linear-gradient(180deg,#8ec8ff,#4aa6ff)" }}>
               Continue {saved.company}
-              <span className="ml-2 text-subtle">
+              <span className="ml-2 text-xs">
                 {dateLabel(saved.day)} · {money(saved.valuation)}
               </span>
             </button>

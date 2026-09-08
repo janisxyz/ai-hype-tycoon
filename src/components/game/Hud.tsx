@@ -1,4 +1,3 @@
-import { Pause, Play } from "lucide-react";
 import { MARKET_COPY } from "@/game/content";
 import { derive } from "@/game/engine";
 import { compact, money } from "@/game/format";
@@ -12,63 +11,89 @@ export function Hud({ state }: { state: GameState }) {
   const setSpeed = useGame((s) => s.setSpeed);
   const profit = d.profit;
   const cycle = MARKET_COPY[state.market];
+  const cards = state.gpus.h100 + state.gpus.b200 + state.gpus.gb200;
   const runway = d.burn > 0 ? Math.floor(state.cash / d.burn) : 999;
-  const runwayPct = Math.max(4, Math.min(100, (runway / 180) * 100));
+  const runwayPct = Math.max(6, Math.min(100, (runway / 180) * 100));
 
   return (
-    <header className="pointer-events-none absolute inset-x-0 top-0 z-20 px-3 pt-3 sm:px-5">
-      <div className="glass hud-bar mx-auto max-w-6xl">
-        <div className="min-w-0 flex-1">
-          <p className="truncate font-display text-lg italic leading-none sm:text-xl">{state.company}</p>
-          <p className="mt-1 flex flex-wrap items-center gap-2 font-mono text-[10px] tracking-[0.14em] text-subtle uppercase">
-            <span>Day {state.day}</span>
-            <span className="rounded-full border border-gold/30 px-2 py-0.5 text-gold">{cycle.title}</span>
-            {state.listed && <span className="text-accent">Public</span>}
-          </p>
+    <header className="pointer-events-none absolute inset-x-0 top-0 z-20 px-2 pt-2 sm:px-4">
+      <div className="pointer-events-auto mx-auto flex max-w-6xl flex-wrap items-center gap-2">
+        <div className="pill min-w-0 flex-1">
+          <span className="pill-ico" style={{ background: "#ffe56a" }}>
+            🏢
+          </span>
+          <span className="min-w-0">
+            <span className="pill-k truncate">{cycle.title}</span>
+            <span className="pill-v block truncate">{state.company}</span>
+          </span>
+          <span className="ml-auto font-black text-xs">D{state.day}</span>
         </div>
-        <Stat k="Cash" v={money(state.cash)} warn={state.cash < d.burn * 14} />
-        <Stat k="P&L" v={`${profit >= 0 ? "+" : ""}${money(profit)}`} warn={profit < 0} good={profit > 0} />
-        <Stat k="Users" v={compact(state.users)} className="hidden sm:flex" />
-        <Stat k="Value" v={money(state.valuation)} className="hidden md:flex" />
-        <div className="flex rounded-xl border border-border bg-elevated/80 p-0.5">
+        <div className={`pill ${state.cash < d.burn * 14 ? "is-warn" : ""}`}>
+          <span className="pill-ico" style={{ background: "#ffd24a" }}>
+            💰
+          </span>
+          <span>
+            <span className="pill-k">Cash</span>
+            <span className="pill-v block">{money(state.cash)}</span>
+          </span>
+        </div>
+        <div className={`pill hidden sm:flex ${profit < 0 ? "is-warn" : profit > 0 ? "is-good" : ""}`}>
+          <span className="pill-ico" style={{ background: profit >= 0 ? "#7dff9a" : "#ff8a7a" }}>
+            {profit >= 0 ? "📈" : "📉"}
+          </span>
+          <span>
+            <span className="pill-k">P&L</span>
+            <span className="pill-v block">
+              {profit >= 0 ? "+" : ""}
+              {money(profit)}
+            </span>
+          </span>
+        </div>
+        <div className="pill hidden sm:flex">
+          <span className="pill-ico" style={{ background: "#8ec8ff" }}>
+            👥
+          </span>
+          <span>
+            <span className="pill-k">Users</span>
+            <span className="pill-v block">{compact(state.users)}</span>
+          </span>
+        </div>
+        <div className="pill hidden md:flex">
+          <span className="pill-ico" style={{ background: "#7af0e8" }}>
+            🖥️
+          </span>
+          <span>
+            <span className="pill-k">GPUs</span>
+            <span className="pill-v block">{cards}</span>
+          </span>
+        </div>
+        <div className="pill hidden lg:flex">
+          <span className="pill-ico" style={{ background: "#e0b0ff" }}>
+            🦄
+          </span>
+          <span>
+            <span className="pill-k">Value</span>
+            <span className="pill-v block">{money(state.valuation)}</span>
+          </span>
+        </div>
+        <div className="flex overflow-hidden rounded-full border-[3px] border-ink bg-paper shadow-[0_4px_0_#2a1c10]">
           {SPEEDS.map((sp) => (
             <button
               key={sp}
               type="button"
               onClick={() => setSpeed(sp)}
-              className={`flex h-9 min-w-9 items-center justify-center rounded-lg px-2 font-mono text-xs ${
-                state.speed === sp ? "bg-paper text-ink" : "text-muted"
+              className={`h-10 min-w-10 px-2 text-xs font-black ${
+                state.speed === sp ? "bg-gold text-ink" : "bg-transparent text-muted"
               }`}
             >
-              {sp === 0 ? <Pause className="h-3.5 w-3.5" /> : sp === 1 ? <Play className="h-3.5 w-3.5" /> : `${sp}x`}
+              {sp === 0 ? "II" : `${sp}×`}
             </button>
           ))}
         </div>
       </div>
-      <div className="mx-auto mt-2 h-1 max-w-6xl overflow-hidden rounded-full bg-elevated/80">
-        <div className={`h-full ${runway < 30 ? "bg-danger" : "bg-gold"}`} style={{ width: `${runwayPct}%` }} />
+      <div className="mx-auto mt-2 h-3 max-w-6xl overflow-hidden rounded-full border-2 border-ink bg-[#ead7b0]">
+        <div className={`h-full ${runway < 30 ? "bg-danger" : "bg-accent"}`} style={{ width: `${runwayPct}%` }} />
       </div>
     </header>
-  );
-}
-
-function Stat({
-  k,
-  v,
-  warn,
-  good,
-  className = "",
-}: {
-  k: string;
-  v: string;
-  warn?: boolean;
-  good?: boolean;
-  className?: string;
-}) {
-  return (
-    <div className={`flex min-w-0 flex-col ${className}`}>
-      <span className="kicker">{k}</span>
-      <span className={`tabular text-sm font-medium ${warn ? "text-danger" : good ? "text-good" : "text-paper"}`}>{v}</span>
-    </div>
   );
 }
