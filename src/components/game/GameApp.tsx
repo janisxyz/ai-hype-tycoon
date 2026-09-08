@@ -172,14 +172,14 @@ export function GameApp() {
             <button
               type="button"
               onClick={() => open(d.hintTab)}
-              className="pointer-events-auto hint-pulse w-full rounded-lg border border-paper/50 bg-bg/80 px-4 py-3 text-left shadow-soft backdrop-blur-sm"
+              className="glass hint-pulse pointer-events-auto w-full rounded-2xl px-4 py-3 text-left"
             >
-              <p className="kicker text-paper">Tap the bouncing building</p>
+              <p className="kicker">Next move</p>
               <p className="mt-0.5 text-sm text-paper">{d.hint}</p>
             </button>
           </div>
-          <nav className="pointer-events-auto mt-2 border-t border-border bg-bg/80 px-2 pb-[env(safe-area-inset-bottom)] pt-1 backdrop-blur-sm">
-            <div className="mx-auto grid max-w-2xl grid-cols-6">
+          <div className="px-3 pb-[calc(10px+env(safe-area-inset-bottom))] pt-2">
+            <nav className="glass dock mx-auto max-w-2xl">
               {TABS.map((t) => {
                 const Icon = t.icon;
                 const pulse = d.hintTab === t.id;
@@ -188,17 +188,15 @@ export function GameApp() {
                     key={t.id}
                     type="button"
                     onClick={() => open(t.id)}
-                    className={`flex min-h-14 flex-col items-center justify-center gap-0.5 text-xs ${
-                      pulse ? "text-accent" : "text-muted"
-                    }`}
+                    className={`dock-item ${pulse ? "is-hint" : ""}`}
                   >
                     <Icon className="h-4 w-4" />
                     {t.label}
                   </button>
                 );
               })}
-            </div>
-          </nav>
+            </nav>
+          </div>
         </div>
       )}
 
@@ -220,15 +218,16 @@ export function GameApp() {
       {toast && (
         <div
           role="status"
-          className="fade-up pointer-events-none fixed inset-x-0 bottom-36 z-40 mx-auto w-max max-w-[min(92vw,28rem)] rounded-md border border-border bg-elevated px-4 py-2 text-sm text-paper shadow-soft"
+          className="fade-up glass pointer-events-none fixed inset-x-0 bottom-40 z-40 mx-auto w-max max-w-[min(92vw,28rem)] rounded-2xl px-4 py-2 text-sm text-paper"
         >
           {toast}
         </div>
       )}
 
       {banner && (
-        <div className="fade-up pointer-events-none fixed inset-x-0 top-24 z-40 mx-auto w-max max-w-[min(92vw,24rem)] rounded-lg border border-accent/40 bg-surface px-4 py-3 text-center shadow-soft">
-          <p className="font-display text-xl italic">{banner.title}</p>
+        <div className="fade-up glass pointer-events-none fixed inset-x-0 top-28 z-40 mx-auto w-max max-w-[min(92vw,24rem)] rounded-2xl px-5 py-3 text-center">
+          <p className="kicker">Milestone</p>
+          <p className="mt-1 font-display text-2xl italic text-paper">{banner.title}</p>
           <p className="mt-1 text-xs text-muted">{banner.body}</p>
         </div>
       )}
