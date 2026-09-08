@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="ink">#0C0C0B</color>
-    <color name="paper">#E7E2D6</color>
-    <color name="sage">#8FAD90</color>
-    <color name="danger">#C45C4A</color>
-    <color name="sky">#8ECAE6</color>
+    <color name="ink">#07080A</color>
+    <color name="paper">#F3E6C8</color>
+    <color name="sage">#7EE0B8</color>
+    <color name="gold">#E8C56B</color>
+    <color name="danger">#E06A5A</color>
+    <color name="sky">#4F8FB8</color>
 </resources>

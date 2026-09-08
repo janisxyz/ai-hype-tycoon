@@ -2,34 +2,36 @@
 @source "./**/*.{ts,tsx}";
 
 @theme {
-  --color-bg: #0c0c0b;
-  --color-surface: #161614;
-  --color-elevated: #1e1e1b;
-  --color-fg: #e7e2d6;
-  --color-muted: #9a958c;
-  --color-subtle: #6f6b64;
-  --color-paper: #e7e2d6;
-  --color-ink: #0c0c0b;
-  --color-accent: #8fad90;
-  --color-accent-fg: #0c0c0b;
-  --color-good: #8fad90;
-  --color-warn: #c4a574;
-  --color-danger: #c45c4a;
-  --color-border: color-mix(in oklab, var(--color-fg) 12%, transparent);
-  --color-border-strong: color-mix(in oklab, var(--color-fg) 22%, transparent);
+  --color-bg: #07080a;
+  --color-surface: #10141a;
+  --color-elevated: #171d26;
+  --color-fg: #f4efe4;
+  --color-muted: #a8b0b8;
+  --color-subtle: #6d7680;
+  --color-paper: #f3e6c8;
+  --color-ink: #07080a;
+  --color-accent: #7ee0b8;
+  --color-accent-fg: #04140e;
+  --color-gold: #e8c56b;
+  --color-good: #7ee0b8;
+  --color-warn: #e0b36a;
+  --color-danger: #e06a5a;
+  --color-border: color-mix(in oklab, var(--color-paper) 12%, transparent);
+  --color-border-strong: color-mix(in oklab, var(--color-paper) 26%, transparent);
   --color-ink-border: color-mix(in oklab, var(--color-ink) 16%, transparent);
 
   --font-display: "Fraunces", "Times New Roman", serif;
   --font-sans: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
 
-  --radius-xs: 4px;
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --radius-xl: 24px;
+  --radius-xs: 6px;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
 
-  --shadow-soft: 0 18px 40px color-mix(in oklab, #000 42%, transparent);
-  --shadow-sheet: 0 -12px 40px color-mix(in oklab, #000 28%, transparent);
+  --shadow-soft: 0 24px 60px color-mix(in oklab, #000 55%, transparent);
+  --shadow-sheet: 0 -28px 70px color-mix(in oklab, #000 48%, transparent);
 
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-smooth-out: cubic-bezier(0.22, 1, 0.36, 1);
@@ -47,7 +49,7 @@
   --motion-scale-modal: 0.96;
   --motion-scale-menu: 0.97;
   --text-micro: 0.6875rem;
-  --tracking-kicker: 0.16em;
+  --tracking-kicker: 0.18em;
 }
 
 @layer base {
@@ -70,6 +72,9 @@
     font-family: var(--font-sans);
     line-height: 1.5;
     text-rendering: optimizeLegibility;
+    background:
+      radial-gradient(1200px 600px at 50% -10%, color-mix(in oklab, #5ea0c8 28%, transparent), transparent 60%),
+      var(--color-bg);
   }
 
   button:not(:disabled),
@@ -92,7 +97,7 @@
   }
 
   input[type="range"] {
-    accent-color: var(--color-accent);
+    accent-color: var(--color-gold);
     height: 12px;
   }
 }
@@ -114,15 +119,17 @@
 @keyframes hint-pulse {
   0%,
   100% {
-    border-color: color-mix(in oklab, var(--color-accent) 28%, transparent);
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--color-gold) 0%, transparent);
+    border-color: color-mix(in oklab, var(--color-gold) 45%, transparent);
   }
   50% {
-    border-color: var(--color-accent);
+    box-shadow: 0 0 28px color-mix(in oklab, var(--color-gold) 35%, transparent);
+    border-color: var(--color-gold);
   }
 }
 
 .hint-pulse {
-  animation: hint-pulse 1.6s var(--ease-out) infinite;
+  animation: hint-pulse 1.8s var(--ease-out) infinite;
 }
 
 .game-shell {
@@ -130,6 +137,17 @@
   height: 100%;
   min-height: 100dvh;
   overflow: hidden;
+}
+
+.game-shell::after {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  background:
+    radial-gradient(120% 70% at 50% 120%, color-mix(in oklab, #07080a 55%, transparent), transparent 55%),
+    linear-gradient(to bottom, color-mix(in oklab, #07080a 28%, transparent), transparent 18%, transparent 78%, color-mix(in oklab, #07080a 42%, transparent));
 }
 
 .game-map {
@@ -157,19 +175,34 @@
   padding: 28px 20px calc(20px + env(safe-area-inset-bottom));
 }
 
+.glass {
+  background: color-mix(in oklab, var(--color-bg) 62%, transparent);
+  border: 1px solid color-mix(in oklab, var(--color-paper) 16%, transparent);
+  box-shadow:
+    inset 0 1px 0 color-mix(in oklab, #fff 10%, transparent),
+    var(--shadow-soft);
+  backdrop-filter: blur(18px) saturate(1.2);
+}
+
 .game-cta {
   pointer-events: auto;
   display: block;
   width: 100%;
-  min-height: 52px;
+  min-height: 54px;
   margin-top: 12px;
   border: 0;
-  border-radius: 12px;
-  background: var(--color-paper);
+  border-radius: 14px;
+  background: linear-gradient(180deg, #f7ebc8, #e4c56a);
   color: var(--color-ink);
   font-family: var(--font-sans);
   font-size: 15px;
-  font-weight: 600;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+  box-shadow: 0 10px 28px color-mix(in oklab, #e8c56b 28%, transparent);
+}
+
+.game-cta:active {
+  transform: translateY(1px) scale(0.99);
 }
 
 .game-field {
@@ -180,7 +213,7 @@
   margin-top: 8px;
   border: 1px solid var(--color-border-strong);
   border-radius: 12px;
-  background: var(--color-surface);
+  background: color-mix(in oklab, var(--color-ink) 55%, transparent);
   color: var(--color-fg);
   padding: 0 12px;
   font-family: var(--font-sans);
@@ -189,42 +222,108 @@
 
 .game-panel {
   pointer-events: auto;
-  border-radius: 16px;
-  background: color-mix(in oklab, var(--color-bg) 88%, transparent);
-  padding: 16px;
+  border-radius: 22px;
+  background: color-mix(in oklab, var(--color-bg) 78%, transparent);
+  border: 1px solid color-mix(in oklab, var(--color-paper) 16%, transparent);
+  padding: 18px;
   box-shadow: var(--shadow-soft);
+  backdrop-filter: blur(20px) saturate(1.15);
+}
+
+.hud-bar {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-radius: 18px;
+  padding: 10px 12px;
+}
+
+.dock {
+  pointer-events: auto;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 2px;
+  border-radius: 22px;
+  padding: 6px;
+}
+
+.dock-item {
+  display: flex;
+  min-height: 58px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  border-radius: 16px;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-subtle);
+  transition: background 180ms var(--ease-out), color 180ms var(--ease-out), transform 180ms var(--ease-out);
+}
+
+.dock-item.is-on,
+.dock-item.is-hint {
+  color: var(--color-paper);
+  background: color-mix(in oklab, var(--color-paper) 10%, transparent);
+}
+
+.dock-item.is-hint {
+  color: var(--color-gold);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--color-gold) 45%, transparent);
+}
+
+.map-chip {
+  border-radius: 999px;
+  border: 1px solid color-mix(in oklab, var(--color-paper) 22%, transparent);
+  background: color-mix(in oklab, #07080a 72%, transparent);
+  color: var(--color-paper);
+  padding: 5px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  backdrop-filter: blur(10px);
+}
+
+.map-chip.is-hot {
+  background: linear-gradient(180deg, #f7ebc8, #e4c56a);
+  color: #14110b;
+  border-color: transparent;
 }
 
 @layer components {
   .kicker {
-    font-family: var(--font-sans);
+    font-family: var(--font-mono);
     font-size: var(--text-micro);
     font-weight: 500;
     letter-spacing: var(--tracking-kicker);
     text-transform: uppercase;
-    color: var(--color-subtle);
+    color: var(--color-gold);
   }
 
   .util-track {
-    height: 6px;
+    height: 7px;
     overflow: hidden;
     border-radius: 999px;
-    background: var(--color-bg);
+    background: color-mix(in oklab, var(--color-fg) 8%, transparent);
   }
 
   .util-fill {
     height: 100%;
     border-radius: inherit;
-    background: var(--color-accent);
+    background: linear-gradient(90deg, #4ecf9a, var(--color-accent));
     transition: width 250ms var(--ease-out);
   }
 
   .util-fill.is-paper {
-    background: var(--color-paper);
+    background: linear-gradient(90deg, #d7b45a, var(--color-gold));
   }
 
   .util-fill.is-warn {
-    background: var(--color-danger);
+    background: linear-gradient(90deg, #c45c4a, var(--color-danger));
   }
 
   .rack-cell {
@@ -267,13 +366,16 @@
 
 .cash-float {
   animation: cash-float 1.5s var(--ease-out) both;
+  text-shadow: 0 0 18px color-mix(in oklab, currentColor 55%, transparent);
+  font-weight: 650;
 }
 
 .iso-scene {
   position: absolute;
   inset: 0;
   overflow: hidden;
-  background: radial-gradient(circle at 50% 28%, #9fd4ee, #6eb5d6 72%);
+  background:
+    radial-gradient(circle at 50% 18%, #9fd0ea, #4d86ab 58%, #1d3344 100%);
 }
 
 .iso-stage {
@@ -295,7 +397,7 @@
   top: -50px;
   width: 400px;
   height: 250px;
-  background: #5aa84a;
+  background: #3f8a46;
   transform: rotateX(60deg) rotateZ(-45deg);
   border: 1px solid color-mix(in oklab, var(--color-fg) 10%, transparent);
 }
@@ -344,7 +446,7 @@
 }
 
 .iso-bldg.is-on .iso-top {
-  background: var(--color-accent);
+  background: var(--color-gold);
 }
 
 .iso-tag {

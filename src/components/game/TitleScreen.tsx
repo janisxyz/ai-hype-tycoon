@@ -27,13 +27,29 @@ export function TitleScreen({
         <TitleCampus />
       </div>
       <div className="game-hud-col">
-        <div>
-          <p className="kicker text-paper">3D idle campus</p>
-          <h1 className="mt-2 font-display text-4xl leading-[0.95] italic text-paper sm:text-5xl">AI Hype Tycoon</h1>
+        <div className="pointer-events-none">
+          <p className="kicker text-gold">Frontier lab · idle campus</p>
+          <h1 className="mt-2 max-w-[16ch] font-display text-5xl leading-[0.9] italic text-paper sm:text-6xl">
+            AI Hype Tycoon
+          </h1>
+          <p className="mt-3 max-w-sm text-sm text-paper/75">
+            Raise. Hire. Ship vapor. Go public. The tape never ends.
+          </p>
         </div>
         <div className="game-panel">
-          <p className="text-sm text-paper">Tap the bouncing Lab. Open Chat. Money starts tonight.</p>
-          <label className="mt-4 block text-xs font-medium tracking-wide text-muted uppercase">
+          <div className="mb-3 grid grid-cols-3 gap-2">
+            {[
+              { k: "01", v: "Raise" },
+              { k: "02", v: "Ship" },
+              { k: "03", v: "Loot" },
+            ].map((item) => (
+              <div key={item.k} className="rounded-xl border border-border bg-elevated/70 px-3 py-2">
+                <p className="font-mono text-[10px] tracking-[0.16em] text-gold">{item.k}</p>
+                <p className="mt-0.5 font-display text-lg italic leading-none text-paper">{item.v}</p>
+              </div>
+            ))}
+          </div>
+          <label className="block text-xs font-medium tracking-wide text-muted uppercase">
             Company
             <input
               value={name}
@@ -43,13 +59,13 @@ export function TitleScreen({
             />
           </label>
           <button type="button" onClick={() => onStart(name)} className="game-cta">
-            Play
+            Open the garage
           </button>
           {saved && (
             <button
               type="button"
               onClick={onContinue}
-              className="mt-2 min-h-12 w-full rounded-lg border border-border bg-surface/80 text-sm font-medium text-fg"
+              className="mt-2 min-h-12 w-full rounded-xl border border-border bg-surface/80 text-sm font-medium text-fg"
             >
               Continue {saved.company}
               <span className="ml-2 text-subtle">
