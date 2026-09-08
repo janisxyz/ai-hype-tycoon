@@ -1,0 +1,182 @@
+@theme {
+  --color-bg: #4aa3d0;
+  --color-surface: #fff6e4;
+  --color-elevated: #ffe7b0;
+  --color-fg: #2a1c10;
+  --color-muted: #6a5644;
+  --color-subtle: #8a7460;
+  --color-paper: #fff4d2;
+  --color-ink: #2a1c10;
+  --color-accent: #2ecf7a;
+  --color-accent-fg: #083318;
+  --color-gold: #ffd24a;
+  --color-good: #1aa85a;
+  --color-warn: #ff9a2e;
+  --color-danger: #ef4b3a;
+  --color-border: #3a2a16;
+  --color-border-strong: #2a1c10;
+  --color-sky: #7ec8ea;
+  --font-display: "Nunito", "Trebuchet MS", system-ui, sans-serif;
+  --font-sans: "Nunito", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "Nunito", ui-monospace, Menlo, monospace;
+  --shadow-soft: 0 6px 0 #2a1c10;
+  --shadow-sheet: 0 -8px 0 #2a1c10;
+}
+
+html, body, #app, #root {
+  background: #7ec8ea !important;
+  color: #2a1c10;
+}
+
+body {
+  font-weight: 700;
+  background: #7ec8ea !important;
+}
+
+.game-shell::after {
+  content: none !important;
+  background: none !important;
+}
+
+.glass {
+  background: #fff6e4;
+  border: 3px solid #2a1c10;
+  box-shadow: 0 5px 0 #2a1c10;
+  backdrop-filter: none;
+}
+
+.game-cta,
+button.bg-paper {
+  border: 3px solid #2a1c10;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #ffe56a 0%, #ffc21a 70%, #f0a800 100%);
+  color: #2a1c10;
+  font-weight: 900;
+  box-shadow: 0 5px 0 #2a1c10;
+}
+
+.game-field {
+  border: 3px solid #2a1c10;
+  background: #fff;
+  color: #2a1c10;
+  font-weight: 800;
+}
+
+.game-panel {
+  background: #fff6e4;
+  border: 3px solid #2a1c10;
+  box-shadow: 0 6px 0 #2a1c10;
+  backdrop-filter: none;
+}
+
+.pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 4px 12px 4px 4px;
+  border: 3px solid #2a1c10;
+  border-radius: 999px;
+  background: #fff6e4;
+  box-shadow: 0 4px 0 #2a1c10;
+  color: #2a1c10;
+}
+.pill-ico {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  border: 3px solid #2a1c10;
+  box-shadow: 0 2px 0 #2a1c10;
+}
+.pill-k {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #8a7460;
+  line-height: 1;
+}
+.pill-v { font-size: 14px; font-weight: 900; line-height: 1.1; }
+.pill.is-warn { background: #ffd4c8; }
+.pill.is-good { background: #d4ffe2; }
+
+.dock {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 6px;
+  padding: 8px 10px 10px;
+  border-radius: 28px;
+  background: #fff6e4;
+  border: 3px solid #2a1c10;
+  box-shadow: 0 6px 0 #2a1c10;
+  grid-template-columns: none;
+}
+.dock-item {
+  flex: 1;
+  min-height: 0;
+  color: #2a1c10;
+  font-size: 9px;
+  font-weight: 800;
+  background: transparent;
+}
+.dock-orb {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 999px;
+  border: 3px solid #2a1c10;
+  box-shadow: 0 4px 0 #2a1c10;
+}
+.dock-lab { background: linear-gradient(180deg, #ffd36a, #ff9a2e); }
+.dock-gpu { background: linear-gradient(180deg, #7af0e8, #2ec4c8); }
+.dock-sell { background: linear-gradient(180deg, #7dff9a, #2ecf7a); }
+.dock-crew { background: linear-gradient(180deg, #8ec8ff, #4aa6ff); }
+.dock-hq { background: linear-gradient(180deg, #ffe56a, #ffc21a); }
+.dock-dark { background: linear-gradient(180deg, #ff8a7a, #ef4b3a); }
+
+.map-chip {
+  border: 3px solid #2a1c10;
+  background: #fff6e4;
+  color: #2a1c10;
+  font-weight: 900;
+  box-shadow: 0 3px 0 #2a1c10;
+  backdrop-filter: none;
+}
+.map-chip.is-hot { background: linear-gradient(180deg, #ffe56a, #ffc21a); color: #2a1c10; }
+
+.sheet { background: #fff6e4; color: #2a1c10; border: 3px solid #2a1c10; box-shadow: 0 -6px 0 #2a1c10; }
+.sheet .text-paper, .sheet .text-fg { color: #2a1c10; }
+.sheet .text-muted { color: #6a5644; }
+.sheet .text-subtle { color: #8a7460; }
+.sheet .bg-elevated { background: #ffe7b0; }
+.sheet .bg-surface { background: #fff8ea; }
+.sheet .border-border, .sheet .border-border-strong { border-color: #2a1c10; }
+
+.hint-card {
+  pointer-events: auto;
+  width: 100%;
+  border: 3px solid #2a1c10;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #fff4b0, #ffe56a);
+  box-shadow: 0 5px 0 #2a1c10;
+  color: #2a1c10;
+}
+.toast-card, .banner-card {
+  border: 3px solid #2a1c10;
+  background: #fff6e4;
+  box-shadow: 0 5px 0 #2a1c10;
+  color: #2a1c10;
+}
+.kicker { font-weight: 800; color: #b86a12; }
+.util-track { height: 12px; background: #ead7b0; border: 2px solid #2a1c10; }
+
+@keyframes hint-pulse {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
