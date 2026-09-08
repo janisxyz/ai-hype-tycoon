@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Building2, Cpu, FlaskConical, Skull, Store, Users } from "lucide-react";
 import { blip, unlockAudio } from "@/game/audio";
-import { DAY_MS, EVENTS, FAIL_COPY, MILESTONE_COPY } from "@/game/content";
+import { EVENTS, FAIL_COPY, MILESTONE_COPY } from "@/game/content";
+import { DAY_MS } from "@/game/tempo";
 import { derive } from "@/game/engine";
 import { writeSave } from "@/game/save";
 import { useGame } from "@/game/store";
